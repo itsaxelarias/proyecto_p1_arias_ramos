@@ -1,16 +1,17 @@
-// ===== Estado =====
+// ==================== Osprey GX Chat – script.js (robusto) ====================
+
+// ---- Estado global ----
 let ws;
 let currentChannel = "general";
 const messagesByChannel = { general: [], "off-topic": [], soporte: [] };
 
-// ===== Helpers DOM =====
+// ---- DOM ----
 const app          = document.getElementById("app");
 const joinScreen   = document.getElementById("join-screen");
 const joinName     = document.getElementById("joinName");
 const joinBtn      = document.getElementById("joinBtn");
 
 const msgBox       = document.getElementById("messages");
-const username     = document.getElementById("username");
 const messageInput = document.getElementById("message");
 const sendBtn      = document.getElementById("sendBtn");
 const clearBtn     = document.getElementById("clearBtn");
@@ -19,39 +20,70 @@ const channelList  = document.getElementById("channelList");
 const membersList  = document.getElementById("members");
 const roomTitle    = document.getElementById("roomTitle");
 
-// ===== Persistencia de usuario =====
+// Soportar 2 variantes de UI: input o div para el nombre
+const usernameInput   = document.getElementById("username");         // puede NO existir
+const usernameDisplay = document.getElementById("usernameDisplay");   // puede NO existir
+
+function getUserName(){
+  if (usernameInput)   return (usernameInput.value || "").trim();
+  if (usernameDisplay) return (usernameDisplay.textContent || "").trim();
+  return "";
+}
+function setUserName(name){
+  const n = (name || "Invitado").trim() || "Invitado";
+  if (usernameInput){ usernameInput.value = n; usernameInput.title = n; }
+  if (usernameDisplay){ usernameDisplay.textContent = n; usernameDisplay.title = n; }
+}
+
+// ---- Presencia (punto verde del panel) ----
+const meDot = document.getElementById("meDot");
+const mePresence = document.getElementById("mePresence");
+function setPresence(state){
+  if (!meDot || !mePresence) return;
+  meDot.classList.remove("status-online","status-reconnecting","status-offline");
+  if(state === "online"){
+    meDot.classList.add("status-online");
+    mePresence.textContent = "En línea";
+  }else if(state === "reconnecting"){
+    meDot.classList.add("status-reconnecting");
+    mePresence.textContent = "Reconectando…";
+  }else{
+    meDot.classList.add("status-offline");
+    mePresence.textContent = "Desconectado";
+  }
+}
+
+// ---- Persistencia y flujo de ingreso ----
 const savedUser = localStorage.getItem("gx_user") || "";
 if (savedUser) {
-  username.value = savedUser;
+  setUserName(savedUser);
   showApp();
 } else {
   showJoin();
 }
 
-// ===== Pantalla Join =====
-joinBtn.addEventListener("click", () => {
-  const name = joinName.value.trim();
+joinBtn?.addEventListener("click", () => {
+  const name = (joinName?.value || "").trim();
   if (!name) return;
   localStorage.setItem("gx_user", name);
-  username.value = name;
+  setUserName(name);
   showApp();
 });
-
-joinName.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") joinBtn.click();
+joinName?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") joinBtn?.click();
 });
 
 function showJoin() {
-  app.hidden = true;
-  joinScreen.style.display = "grid";
+  if (app) app.hidden = true;
+  if (joinScreen) joinScreen.style.display = "grid";
 }
 function showApp() {
-  joinScreen.style.display = "none";
-  app.hidden = false;
-  connectWS();        // Inicia conexión cuando entra a la app
+  if (joinScreen) joinScreen.style.display = "none";
+  if (app) app.hidden = false;
+  connectWS(); // inicia conexión
 }
 
-// ===== WebSocket =====
+// ---- WebSocket ----
 function connectWS() {
   const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
   ws = new WebSocket(WS_URL);
@@ -59,40 +91,39 @@ function connectWS() {
   ws.onopen = () => {
     appendSystem("Conectado al servidor.");
     toggleButtons(true);
-    // Enviar nombre y unirse al canal actual
-    sendSetName(username.value || "Invitado");
+    setPresence("online");
+    sendSetName(getUserName() || "Invitado");
     sendJoin(currentChannel);
   };
 
-  ws.onerror = (err) => {
-    console.error("WS error:", err);
+  ws.onerror = () => {
     appendSystem("No se pudo conectar al servidor WebSocket.");
     toggleButtons(false);
+    setPresence("reconnecting");
   };
 
   ws.onclose = () => {
     appendSystem("Conexión cerrada.");
     toggleButtons(false);
+    setPresence("offline");
   };
 
   ws.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
+    let msg;
+    try { msg = JSON.parse(event.data); }
+    catch { return; }
 
-      // Lista de usuarios por canal
-      if (msg.type === "users") {
-        if (msg.channel === currentChannel) renderUsers(msg.users);
-        return;
-      }
-
-      // Mensaje de chat / sistema
-      const ch = msg.channel || currentChannel;
-      if (!messagesByChannel[ch]) messagesByChannel[ch] = [];
-      messagesByChannel[ch].push(msg);
-      if (ch === currentChannel) renderMessage(msg);
-    } catch (e) {
-      console.error("Parse fail:", e, event.data);
+    // Actualización de lista de usuarios
+    if (msg.type === "users") {
+      if (msg.channel === currentChannel) renderUsers(msg.users);
+      return;
     }
+
+    // Mensajes de chat o sistema
+    const ch = msg.channel || currentChannel;
+    if (!messagesByChannel[ch]) messagesByChannel[ch] = [];
+    messagesByChannel[ch].push(msg);
+    if (ch === currentChannel) renderMessage(msg);
   };
 }
 
@@ -103,50 +134,54 @@ function sendSetName(name) {
 }
 function sendJoin(channel) {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "join", channel, user: username.value || "Invitado" }));
+    ws.send(JSON.stringify({ type: "join", channel, user: getUserName() || "Invitado" }));
   }
 }
 
-// ===== Envío de mensajes =====
-sendBtn.onclick = () => {
-  const txt = messageInput.value.trim();
+// ---- Envío de mensajes ----
+sendBtn?.addEventListener("click", sendCurrentMessage);
+messageInput?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendCurrentMessage();
+});
+
+function sendCurrentMessage(){
+  const txt = (messageInput?.value || "").trim();
   if (!txt) return;
-  if (ws.readyState !== WebSocket.OPEN) return appendSystem("No conectado.");
+  if (!ws || ws.readyState !== WebSocket.OPEN) return appendSystem("No conectado.");
 
   ws.send(JSON.stringify({
     type: "chat",
-    user: username.value.trim() || "Invitado",
+    user: getUserName() || "Invitado",
     text: txt,
     channel: currentChannel
   }));
-  messageInput.value = "";
-  messageInput.focus();
-};
+  if (messageInput){ messageInput.value = ""; messageInput.focus(); }
+}
 
-// ===== Cerrar sesión =====
-clearBtn.onclick = () => {
+// ---- Cerrar sesión ----
+clearBtn?.addEventListener("click", () => {
   if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "disconnect", user: username.value, channel: currentChannel }));
+    ws.send(JSON.stringify({ type: "disconnect", user: getUserName(), channel: currentChannel }));
   }
-  // limpiar app y volver al join
   Object.keys(messagesByChannel).forEach(k => messagesByChannel[k] = []);
-  membersList.innerHTML = "";
-  msgBox.innerHTML = "";
+  if (membersList) membersList.innerHTML = "";
+  if (msgBox) msgBox.innerHTML = "";
   localStorage.removeItem("gx_user");
   appendSystem("Cerraste sesión.");
-  ws?.close();
+  try { ws?.close(); } catch {}
   showJoin();
-};
+});
 
-// ===== Reconectar =====
-reconnectBtn.onclick = () => {
+// ---- Reconectar ----
+reconnectBtn?.addEventListener("click", () => {
   if (ws && ws.readyState === WebSocket.OPEN) return appendSystem("Ya estás conectado.");
+  setPresence("reconnecting");
   appendSystem("Intentando reconectar...");
   connectWS();
-};
+});
 
-// ===== Cambio de canal =====
-channelList.addEventListener("click", (e) => {
+// ---- Cambio de canal ----
+channelList?.addEventListener("click", (e) => {
   const li = e.target.closest("li[data-channel]");
   if (!li) return;
   const newChannel = li.getAttribute("data-channel");
@@ -156,23 +191,25 @@ channelList.addEventListener("click", (e) => {
   li.classList.add("active");
 
   currentChannel = newChannel;
-  roomTitle.textContent = `# ${currentChannel}`;
-  msgBox.innerHTML = "";
-  (messagesByChannel[currentChannel] || []).forEach(renderMessage);
+  if (roomTitle) roomTitle.textContent = `# ${currentChannel}`;
+  if (msgBox) {
+    msgBox.innerHTML = "";
+    (messagesByChannel[currentChannel] || []).forEach(renderMessage);
+  }
   sendJoin(currentChannel);
 });
 
-// ===== Render =====
+// ---- Render ----
 function renderMessage(msg) {
+  if (!msgBox) return;
   const div = document.createElement("div");
   const isSystem = (msg.user === "Sistema");
-  const isSelf   = (!isSystem && (msg.user === (username.value || "Invitado")));
+  const isSelf   = (!isSystem && (msg.user === (getUserName() || "Invitado")));
 
   div.className = "msg " + (isSystem ? "system" : (isSelf ? "self" : "other")) + " flash";
 
-  // Encabezado: autor + hora mínima estilizada
-  const safeUser = escapeHtml(msg.user);
-  const safeText = escapeHtml(msg.text);
+  const safeUser = escapeHtml(msg.user || "Invitado");
+  const safeText = escapeHtml(msg.text || "");
   const safeTime = msg.time ? escapeHtml(msg.time) : new Date().toLocaleTimeString();
 
   div.innerHTML = `
@@ -185,32 +222,43 @@ function renderMessage(msg) {
 
   msgBox.appendChild(div);
   msgBox.scrollTop = msgBox.scrollHeight;
-
-  // quitar clase flash luego del primer repintado para permitir futuros flashes
   setTimeout(() => div.classList.remove("flash"), 600);
 }
+
 function renderUsers(users) {
+  if (!membersList) return;
   membersList.innerHTML = "";
-  users.forEach(u => {
-    const li = document.createElement("li");
+  (users || []).forEach(u => {
+    const isMe = (u === (getUserName() || ""));
+    const display = isMe ? `${u} (tú)` : u;
+
+    const li  = document.createElement("li");
     const dot = document.createElement("span");
-    dot.className = "status";            // 🔥 punto verde titilante
+    dot.className = "status status-online";
+
     const name = document.createElement("span");
-    name.textContent = (u === (username.value || "")) ? `${u} (tú)` : u;
+    name.className = "user-name";  // 👈 le aplican los estilos de truncado
+    name.textContent = display;
+    name.title = display;          // 👈 tooltip con el nombre completo
+
     li.appendChild(dot);
     li.appendChild(name);
     membersList.appendChild(li);
   });
 }
 
+
 function appendSystem(text) {
   renderMessage({ user: "Sistema", text, time: new Date().toLocaleTimeString(), channel: currentChannel });
 }
+
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
 function toggleButtons(connected) {
-  sendBtn.disabled = !connected;
-  clearBtn.disabled = !connected;
-  reconnectBtn.disabled = connected;
+  if (sendBtn) sendBtn.disabled = !connected;
+  if (clearBtn) clearBtn.disabled = !connected;
+  if (reconnectBtn) reconnectBtn.disabled = connected;
 }
+// ======================================================================
