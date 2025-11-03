@@ -7,6 +7,8 @@
   --accent:#ff7b00; --accent-2:#ffae42;
   --text:#f2f2f2; --muted:#a0a0a0; --border:#2a2a2a; --warn:#ff4d4d;
   --radius:16px; --shadow:0 8px 25px rgba(0,0,0,.4);
+  --hdr: 56px;          /* altura header en móvil */
+  --cmp: 64px;          /* altura composer en móvil */
 
   /* layout */
   --mbr-w: 280px;         /* ancho del panel miembros en desktop */
@@ -230,42 +232,91 @@ html,body{
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width:1024px){
-  .app{grid-template-columns:240px minmax(0,1fr)}
-  :root{ --mbr-w: 240px }
-}
+/* ======= MOBILE (≤720px) ======= */
+@media (max-width: 720px){
+  :root{ --hdr-h:56px; --cmp-h:68px; }
 
-@media (max-width:720px){
-  .app{grid-template-columns:1fr}
-  .sidebar{display:none}
-
+  /* Usar altura real del viewport (iOS friendly) */
   .chat{
-    grid-template-columns:1fr;
-    grid-template-rows:56px 1fr 68px;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: var(--hdr-h) 1fr var(--cmp-h) !important;
+    height: calc(var(--vh, 1vh) * 100);
   }
-  .chat-header{position:sticky; top:0; z-index:5}
 
-  /* drawer móvil */
+  /* Header compacto */
+  .chat-header{
+    position: sticky; top: 0; z-index: 10; padding: 0 10px;
+    gap: 8px;
+  }
+  #channelsToggle{ display:inline-flex; margin-right:8px; }
+
+  /* Mensajes ocupan el espacio entre header y composer */
+  .messages-wrap{ grid-column:1/2; grid-row:2/3; min-height:0; }
+  .messages{
+    height: auto; min-height:0;
+    max-height: calc((var(--vh, 1vh) * 100) - var(--hdr-h) - var(--cmp-h));
+    overflow-y: auto;
+  }
+
+  /* Composer siempre visible y con safe-area */
+  .composer{
+    grid-column:1/2; grid-row:3/4;
+    position: sticky; bottom:0; z-index: 9;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    background:#111;
+  }
+
+  /* Sidebar => drawer desde la izquierda */
+  .app{ grid-template-columns: 1fr !important; }
+  .sidebar{
+    position: fixed; left:0; top:0; bottom:0;
+    width: min(82vw, 320px);
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.2,.7,.2,1);
+    z-index: 50;
+    display: flex !important;
+  }
+  .sidebar.open{ transform: translateX(0); }
+  .sidebar-backdrop{
+    position: fixed; inset:0;
+    background: rgba(0,0,0,.35);
+    opacity:0; pointer-events:none; z-index: 49;
+    transition: opacity .24s ease;
+  }
+  .sidebar-backdrop.show{ opacity:1; pointer-events:auto; }
+
+  /* Miembros => drawer desde la derecha (como ya tienes) */
   .members{
-    position:fixed; right:0; top:56px; bottom:68px;
-    width:min(var(--mbr-drawer), 340px); max-width:92vw;
-    transform:translateX(110%); opacity:0;
-    transition: transform .3s cubic-bezier(.2,.7,.2,1), opacity .24s ease;
-    box-shadow:-18px 0 30px rgba(0,0,0,.45);
-    z-index:20;
+    position: fixed; right:0; top: var(--hdr-h); bottom: var(--cmp-h);
+    width: min(85vw, 340px);
+    transform: translateX(100%); opacity:0;
+    transition: transform .28s cubic-bezier(.2,.7,.2,1), opacity .24s ease;
+    box-shadow: -18px 0 30px rgba(0,0,0,.45);
+    border-left: 1px solid var(--border); z-index: 40;
+    display:flex; flex-direction:column; gap:10px;
+    background:#0f0f0f; padding:16px 12px;
   }
-  .members.open{ transform:translateX(0); opacity:1 }
-  .members.collapsed{ width:min(var(--mbr-drawer), 340px); padding:12px } /* seguridad */
-
-  /* backdrop opcional */
+  .members.open{ transform: translateX(0); opacity:1; }
   .members-backdrop{
-    position:fixed; inset:56px 0 68px 0;
-    background:rgba(0,0,0,.35);
-    opacity:0; pointer-events:none; z-index:19;
-    transition:opacity .24s ease;
+    position: fixed; inset: var(--hdr-h) 0 var(--cmp-h) 0;
+    background: rgba(0,0,0,.35);
+    opacity:0; pointer-events:none; z-index: 39;
+    transition: opacity .24s ease;
   }
-  .members-backdrop.show{ opacity:1; pointer-events:auto }
+  .members-backdrop.show{ opacity:1; pointer-events:auto; }
+
+  /* Oculta lista de canales en la barra lateral grande (ya es drawer) */
+  .channels{ display:block; }
 }
+
+/* ======= LANDSCAPE BAJO (poca altura) ======= */
+@media (max-height: 540px) and (max-width: 940px){
+  :root{ --hdr-h:52px; --cmp-h:64px; }
+  .messages{
+    max-height: calc((var(--vh, 1vh) * 100) - var(--hdr-h) - var(--cmp-h));
+  }
+}
+
 
 /* -------- Scrollbars sutiles -------- */
 .messages::-webkit-scrollbar{width:10px}
@@ -430,4 +481,63 @@ html,body{
 .members-list li:hover {
   background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.18));
   border-color: #333;
+}
+
+/* ===== Teléfonos en horizontal (poca altura) ===== */
+@media (orientation: landscape) and (max-height: 480px) {
+  /* 1) Layout: solo chat, sin sidebar fija */
+  .app { grid-template-columns: 1fr !important; }
+  .sidebar { display: none !important; }
+
+  /* 2) Chat en 3 filas: header / mensajes / composer */
+  .chat {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 52px minmax(0,1fr) 60px !important;
+    height: 100vh;
+  }
+  .chat-header { position: sticky; top: 0; z-index: 5; }
+
+  .messages-wrap { grid-column: 1 / 2; grid-row: 2 / 3; min-height: 0; }
+  .messages {
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .composer {
+    grid-column: 1 / 2; grid-row: 3 / 4;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  }
+
+  /* 3) Drawer de MIEMBROS (igual que en vertical) */
+  .members {
+    position: fixed;
+    right: 0; top: 52px;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    width: min(85vw, 360px);
+    max-width: 92vw;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform .28s cubic-bezier(.2,.7,.2,1), opacity .24s ease;
+    box-shadow: -18px 0 30px rgba(0,0,0,.45);
+    border-left: 1px solid var(--border);
+    z-index: 20;
+  }
+  .members.open { transform: translateX(0); opacity: 1; }
+
+  /* 4) Telones (members + sidebar) */
+  .members-backdrop,
+  .sidebar-backdrop{
+    position: fixed;
+    inset: 52px 0 calc(60px + env(safe-area-inset-bottom,0px)) 0;
+    background: rgba(0,0,0,.35);
+    opacity: 0; pointer-events: none;
+    transition: opacity .24s ease;
+    z-index: 19;
+  }
+  .members-backdrop.show,
+  .sidebar-backdrop.show{ opacity: 1; pointer-events: auto; }
+
+  /* 5) Mostrar ☰ en header para abrir canales también en landscape */
+  #channelsToggle { display: inline-flex; }
 }

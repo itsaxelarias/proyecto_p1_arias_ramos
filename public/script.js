@@ -19,7 +19,7 @@ const sendBtn        = document.getElementById("sendBtn");
 const clearBtn       = document.getElementById("clearBtn");
 const reconnectBtn   = document.getElementById("reconnectBtn");
 const channelList    = document.getElementById("channelList");
-const membersList    = document.getElementById("members");
+
 const roomTitle      = document.getElementById("roomTitle");
 
 // Nombre mostrado en el panel inferior
@@ -277,32 +277,82 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;',
 function toggleButtons(connected){ sendBtn.disabled=!connected; clearBtn.disabled=!connected; reconnectBtn.disabled=connected; }
 
 
-// ===== Toggle de MIEMBROS (desktop + móvil) =====
-const chatLayout    = document.querySelector(".chat");
-const membersPanel  = document.querySelector(".members");
-const membersToggle = document.getElementById("membersToggle"); // tu botón con el ícono 👥
+/* ====== Drawers (móvil) y colapso (desktop) – BLOQUE ÚNICO ====== */
 
+// elementos base
+const chatLayout     = document.querySelector(".chat");
+const membersPanel   = document.querySelector(".members");
+const membersList    = document.getElementById("members");           // ya lo usas en renderUsers
+const membersToggle  = document.getElementById("membersToggle");     // botón 👥
+const membersBackdrop= document.getElementById("membersBackdrop");   // <div id="membersBackdrop">
+
+const sidebar        = document.querySelector(".sidebar");           // drawer de canales en móvil
+const channelsToggle = document.getElementById("channelsToggle");    // botón ☰ en el header
+const sidebarBackdrop= document.getElementById("sidebarBackdrop");   // <div id="sidebarBackdrop">
+
+// breakpoint de móvil
 const mqMobile = window.matchMedia("(max-width: 720px)");
 
-function toggleMembers() {
+/* ---- acciones ---- */
+
+// alterna Miembros
+function toggleMembers(){
   if (mqMobile.matches) {
-    // Móvil: drawer
     membersPanel?.classList.toggle("open");
+    membersBackdrop?.classList.toggle("show", membersPanel.classList.contains("open"));
   } else {
-    // Desktop: colapsar/expandir columna
-    chatLayout?.classList.toggle("collapsed");
+    chatLayout?.classList.toggle("collapsed"); // colapsa/expande columna en desktop
   }
 }
 
-membersToggle?.addEventListener("click", toggleMembers);
+// alterna Sidebar (canales) en móvil
+function toggleSidebar(){
+  if (!mqMobile.matches) return; // solo móvil
+  // mostramos la sidebar como drawer
+  sidebar?.classList.toggle("open");
+  sidebarBackdrop?.classList.toggle("show", sidebar.classList.contains("open"));
+}
 
-// Si cambia el tamaño de la ventana, resetea estados que no aplican
+/* ---- listeners ---- */
+membersToggle?.addEventListener("click", toggleMembers);
+channelsToggle?.addEventListener("click", toggleSidebar);
+
+membersBackdrop?.addEventListener("click", () => {
+  membersPanel?.classList.remove("open");
+  membersBackdrop?.classList.remove("show");
+});
+sidebarBackdrop?.addEventListener("click", () => {
+  sidebar?.classList.remove("open");
+  sidebarBackdrop?.classList.remove("show");
+});
+
+/* ---- coherencia al cambiar tamaño/orientación ---- */
 mqMobile.addEventListener?.("change", (e) => {
   if (e.matches) {
-    // Entró a móvil: por si quedó colapsado en desktop
+    // entró a móvil: asegura que NO quede colapsado el layout de escritorio
     chatLayout?.classList.remove("collapsed");
   } else {
-    // Entró a desktop: por si quedó abierto el drawer móvil
+    // entró a desktop: cierra drawers móviles
     membersPanel?.classList.remove("open");
+    membersBackdrop?.classList.remove("show");
+    sidebar?.classList.remove("open");
+    sidebarBackdrop?.classList.remove("show");
   }
+});
+
+// helper para cerrar drawers móviles cuando cambias de canal o envías mensaje
+function closeMobileDrawers(){
+  if (!mqMobile.matches) return;
+  membersPanel?.classList.remove("open");
+  membersBackdrop?.classList.remove("show");
+  sidebar?.classList.remove("open");
+  sidebarBackdrop?.classList.remove("show");
+}
+
+// si usas estos elementos en tu código, enlázalos así:
+document.getElementById("sendBtn")?.addEventListener("click", closeMobileDrawers);
+document.getElementById("channelList")?.addEventListener("click", (ev) => {
+  const li = ev.target.closest("li[data-channel]");
+  if (!li) return;
+  closeMobileDrawers();
 });

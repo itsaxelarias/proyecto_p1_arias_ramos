@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Osprey GX Chat</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ---------- Pantalla de ingreso (overlay) ---------- -->
-  <div id="join-screen" class="join-wrap" aria-modal="true" role="dialog">
+  <!-- ========== PANTALLA DE INGRESO (overlay) ========== -->
+  <div id="join-screen" class="join-wrap" role="dialog" aria-modal="true">
     <div class="join-card">
       <div class="join-head">
         <div class="join-logo">🦅</div>
@@ -28,7 +28,7 @@
         <div class="avatar-help">Sube imagen (PNG/JPG, máx. 5&nbsp;MB)</div>
       </label>
 
-      <!-- MODAL de recorte -->
+      <!-- Modal recorte -->
       <div id="cropper" class="cropper hidden" aria-hidden="true">
         <div class="cropper-card">
           <div class="crop-stage" id="cropStage">
@@ -51,7 +51,7 @@
     </div>
   </div>
 
-  <!-- ---------- Aplicación ---------- -->
+  <!-- ========== APLICACIÓN ========== -->
   <div class="app" id="app" hidden>
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -72,7 +72,7 @@
         </ul>
       </nav>
 
-      <!-- Panel “Yo” -->
+      <!-- Panel Yo -->
       <div class="me">
         <div class="me-left">
           <div class="me-avatar" id="meAvatar">🟠</div>
@@ -87,22 +87,25 @@
       </div>
     </aside>
 
-    <!-- Chat -->
+    <!-- Chat (grilla: header | mensajes | miembros | composer) -->
     <main class="chat">
+      <!-- Header -->
       <header class="chat-header">
-  <div class="room">
-    <h2 id="roomTitle"># general</h2>
-    <span class="sub">Osprey GX Chat</span>
-  </div>
-  <div class="actions">
-    <button id="membersToggle" class="btn ghost" title="Miembros" aria-pressed="false">👥</button>
-    <button id="reconnectBtn" class="btn ghost" title="Reconectar">↻</button>
-    <button id="clearBtn" class="btn warn" title="Cerrar sesión">Cerrar</button>
-  </div>
-</header>
+        <div class="room">
+          <h2 id="roomTitle"># general</h2>
+          <span class="sub">Osprey GX Chat</span>
+        </div>
+        <div class="actions">
+          <!-- ☰ solo se muestra en móvil por CSS -->
+          <button id="channelsToggle" class="btn ghost" aria-label="Abrir canales">☰</button>
+          <!-- 👥 toggle miembros (drawer en móvil, colapso en desktop) -->
+          <button id="membersToggle" class="btn ghost" title="Miembros" aria-pressed="false">👥</button>
+          <button id="reconnectBtn" class="btn ghost" title="Reconectar">↻</button>
+          <button id="clearBtn" class="btn warn" title="Cerrar sesión">Cerrar</button>
+        </div>
+      </header>
 
-
-      <!-- Miembros -->
+      <!-- Lista Miembros (columna derecha en desktop / drawer en móvil) -->
       <section class="members" aria-label="Miembros">
         <div class="members-title">Miembros</div>
         <ul class="members-list" id="members"></ul>
@@ -120,6 +123,10 @@
       </footer>
     </main>
   </div>
+
+  <!-- Telones (NO dentro de .chat para no romper la grilla) -->
+  <div id="membersBackdrop" class="members-backdrop"></div>
+  <div id="sidebarBackdrop"  class="sidebar-backdrop"></div>
 
   <script src="script.js"></script>
 </body>
