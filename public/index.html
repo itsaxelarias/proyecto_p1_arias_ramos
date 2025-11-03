@@ -7,17 +7,46 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- ---------- Pantalla de ingreso ---------- -->
+
+  <!-- ---------- Pantalla de ingreso (overlay) ---------- -->
   <div id="join-screen" class="join-wrap" aria-modal="true" role="dialog">
     <div class="join-card">
       <div class="join-head">
         <div class="join-logo">🦅</div>
         <div>
           <h1>Osprey GX Chat</h1>
-          <p>Elige tu nombre para unirte</p>
+          <p>Elige tu nombre y avatar</p>
         </div>
       </div>
-      <input id="joinName" class="join-input" placeholder="Tu nombre (ej. axelitsHere)" />
+
+      <!-- Selector + preview -->
+      <label class="avatar-picker">
+        <input id="joinAvatar" type="file" accept="image/*" hidden />
+        <div class="avatar-preview" id="joinAvatarPreview" title="Seleccionar avatar">
+          <span>📷</span>
+        </div>
+        <div class="avatar-help">Sube imagen (PNG/JPG, máx. 5&nbsp;MB)</div>
+      </label>
+
+      <!-- MODAL de recorte -->
+      <div id="cropper" class="cropper hidden" aria-hidden="true">
+        <div class="cropper-card">
+          <div class="crop-stage" id="cropStage">
+            <img id="cropImg" alt="Recortar" />
+            <div class="crop-mask"></div>
+          </div>
+
+          <div class="crop-controls">
+            <input id="cropZoom" type="range" min="0.5" max="3" step="0.01" value="1" />
+            <div class="crop-actions">
+              <button id="cropCancel" class="btn">Cancelar</button>
+              <button id="cropUse" class="btn primary">Usar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <input id="joinName" class="join-input" placeholder="Tu nombre" />
       <button id="joinBtn" class="btn primary">Unirse</button>
     </div>
   </div>
@@ -43,21 +72,20 @@
         </ul>
       </nav>
 
+      <!-- Panel “Yo” -->
       <div class="me">
-  <div class="me-left">
-    <div class="me-avatar">🟠</div>
-    <div class="me-info">
-      <div class="me-name" id="usernameDisplay">Ejemplo</div>
-      <div class="me-status-row">
-        <span class="status status-online" id="meDot"></span>
-        <span id="mePresence">En línea</span>
+        <div class="me-left">
+          <div class="me-avatar" id="meAvatar">🟠</div>
+          <div class="me-info">
+            <div class="me-name" id="usernameDisplay">Invitado</div>
+            <div class="me-status-row">
+              <span class="status status-online" id="meDot"></span>
+              <span id="mePresence">En línea</span>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
-
-
- </aside> 
+    </aside>
 
     <!-- Chat -->
     <main class="chat">

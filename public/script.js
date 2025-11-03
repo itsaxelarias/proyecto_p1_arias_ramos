@@ -1,264 +1,277 @@
-// ==================== Osprey GX Chat – script.js (robusto) ====================
+/* =========================================================
+   Osprey GX Chat – Client (FULL)
+   ========================================================= */
 
-// ---- Estado global ----
+/* --------------------- Estado global --------------------- */
 let ws;
 let currentChannel = "general";
 const messagesByChannel = { general: [], "off-topic": [], soporte: [] };
 
-// ---- DOM ----
-const app          = document.getElementById("app");
-const joinScreen   = document.getElementById("join-screen");
-const joinName     = document.getElementById("joinName");
-const joinBtn      = document.getElementById("joinBtn");
+/* ------------------------ DOM base ----------------------- */
+const app            = document.getElementById("app");
+const joinScreen     = document.getElementById("join-screen");
+const joinName       = document.getElementById("joinName");
+const joinBtn        = document.getElementById("joinBtn");
 
-const msgBox       = document.getElementById("messages");
-const messageInput = document.getElementById("message");
-const sendBtn      = document.getElementById("sendBtn");
-const clearBtn     = document.getElementById("clearBtn");
-const reconnectBtn = document.getElementById("reconnectBtn");
-const channelList  = document.getElementById("channelList");
-const membersList  = document.getElementById("members");
-const roomTitle    = document.getElementById("roomTitle");
+const msgBox         = document.getElementById("messages");
+const messageInput   = document.getElementById("message");
+const sendBtn        = document.getElementById("sendBtn");
+const clearBtn       = document.getElementById("clearBtn");
+const reconnectBtn   = document.getElementById("reconnectBtn");
+const channelList    = document.getElementById("channelList");
+const membersList    = document.getElementById("members");
+const roomTitle      = document.getElementById("roomTitle");
 
-// Soportar 2 variantes de UI: input o div para el nombre
-const usernameInput   = document.getElementById("username");         // puede NO existir
-const usernameDisplay = document.getElementById("usernameDisplay");   // puede NO existir
-
-function getUserName(){
-  if (usernameInput)   return (usernameInput.value || "").trim();
-  if (usernameDisplay) return (usernameDisplay.textContent || "").trim();
-  return "";
-}
-function setUserName(name){
-  const n = (name || "Invitado").trim() || "Invitado";
-  if (usernameInput){ usernameInput.value = n; usernameInput.title = n; }
-  if (usernameDisplay){ usernameDisplay.textContent = n; usernameDisplay.title = n; }
+// Nombre mostrado en el panel inferior
+const usernameDisplay = document.getElementById("usernameDisplay");
+function getUserName(){ return (usernameDisplay?.textContent || "").trim(); }
+function setUserName(n){
+  const name = (n || "Invitado").trim() || "Invitado";
+  if (usernameDisplay){ usernameDisplay.textContent = name; usernameDisplay.title = name; }
 }
 
-// ---- Presencia (punto verde del panel) ----
-const meDot = document.getElementById("meDot");
-const mePresence = document.getElementById("mePresence");
-function setPresence(state){
-  if (!meDot || !mePresence) return;
-  meDot.classList.remove("status-online","status-reconnecting","status-offline");
-  if(state === "online"){
-    meDot.classList.add("status-online");
-    mePresence.textContent = "En línea";
-  }else if(state === "reconnecting"){
-    meDot.classList.add("status-reconnecting");
-    mePresence.textContent = "Reconectando…";
-  }else{
-    meDot.classList.add("status-offline");
-    mePresence.textContent = "Desconectado";
+/* ----------------- Avatar (panel inferior) ---------------- */
+const meAvatarBox = document.getElementById("meAvatar");
+function getAvatar(){ return localStorage.getItem("gx_avatar") || ""; }
+function setAvatar(dataUrl){
+  if (dataUrl) localStorage.setItem("gx_avatar", dataUrl);
+  else localStorage.removeItem("gx_avatar");
+  if (meAvatarBox){
+    meAvatarBox.innerHTML = "";
+    if (dataUrl){
+      const img = document.createElement("img");
+      img.src = dataUrl;
+      meAvatarBox.appendChild(img);
+    } else meAvatarBox.textContent = "🟠";
   }
 }
 
-// ---- Persistencia y flujo de ingreso ----
-const savedUser = localStorage.getItem("gx_user") || "";
-if (savedUser) {
-  setUserName(savedUser);
-  showApp();
-} else {
-  showJoin();
+/* ------------------ Presencia (me panel) ------------------ */
+const meDot = document.getElementById("meDot");
+const mePresence = document.getElementById("mePresence");
+function setPresence(state){
+  meDot.classList.remove("status-online","status-reconnecting","status-offline");
+  if(state==="online"){ meDot.classList.add("status-online"); mePresence.textContent="En línea"; }
+  else if(state==="reconnecting"){ meDot.classList.add("status-reconnecting"); mePresence.textContent="Reconectando…"; }
+  else { meDot.classList.add("status-offline"); mePresence.textContent="Desconectado"; }
 }
 
+/* =========================================================
+   JOIN: selección + recorte + redimensionado del avatar
+   ========================================================= */
+const joinAvatar     = document.getElementById("joinAvatar");
+const joinAvatarPrev = document.getElementById("joinAvatarPreview");
+
+// Modal cropper
+const cropper    = document.getElementById("cropper");
+const cropStage  = document.getElementById("cropStage");
+const cropImg    = document.getElementById("cropImg");
+const cropZoom   = document.getElementById("cropZoom");
+const cropCancel = document.getElementById("cropCancel");
+const cropUse    = document.getElementById("cropUse");
+
+// Estado cropper
+const STAGE = 320;  // tamaño de recorte visible
+const OUT   = 256;  // tamaño final exportado
+let imgNatW = 0, imgNatH = 0;
+let baseScale = 1, userScale = 1;
+let offX = 0, offY = 0;
+let isDragging = false, lastX = 0, lastY = 0;
+let pickedAvatarDataUrl = "";
+
+
+// Tras elegir archivo -> cropper
+joinAvatar?.addEventListener("change", () => {
+  const f = joinAvatar.files?.[0];
+  if (!f) return;
+  if (!f.type.startsWith("image/")) return alert("El archivo debe ser una imagen.");
+  if (f.size > 5 * 1024 * 1024) return alert("Imagen muy grande (máx 5 MB).");
+  const reader = new FileReader();
+  reader.onload = () => openCropper(reader.result.toString());
+  reader.readAsDataURL(f);
+});
+
+function openCropper(dataUrl){
+  cropImg.onload = () => {
+    imgNatW = cropImg.naturalWidth; imgNatH = cropImg.naturalHeight;
+    baseScale = Math.max(STAGE/imgNatW, STAGE/imgNatH);
+    userScale = 1; cropZoom.value = "1";
+    const dispW = imgNatW * baseScale, dispH = imgNatH * baseScale;
+    offX = (STAGE - dispW)/2; offY = (STAGE - dispH)/2;
+    applyTransform(); showCropper(true);
+  };
+  cropImg.src = dataUrl;
+}
+function showCropper(flag){ cropper.classList.toggle("hidden", !flag); cropper.setAttribute("aria-hidden", String(!flag)); }
+
+cropZoom?.addEventListener("input", () => {
+  const prevW = imgNatW * baseScale * userScale;
+  const prevH = imgNatH * baseScale * userScale;
+  userScale = parseFloat(cropZoom.value);
+  const newW = imgNatW * baseScale * userScale;
+  const newH = imgNatH * baseScale * userScale;
+  const cx = STAGE/2, cy = STAGE/2;
+  offX = cx - (cx - offX) * (newW/prevW);
+  offY = cy - (cy - offY) * (newH/prevH);
+  clampOffsets(); applyTransform();
+});
+
+cropStage?.addEventListener("pointerdown", e => { isDragging=true; cropStage.setPointerCapture(e.pointerId); lastX=e.clientX; lastY=e.clientY; });
+cropStage?.addEventListener("pointermove", e => {
+  if(!isDragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+  offX+=dx; offY+=dy; clampOffsets(); applyTransform();
+});
+cropStage?.addEventListener("pointerup", ()=> isDragging=false);
+cropStage?.addEventListener("pointercancel", ()=> isDragging=false);
+
+function clampOffsets(){
+  const dispW=imgNatW*baseScale*userScale, dispH=imgNatH*baseScale*userScale;
+  if(dispW>STAGE){ const minX=STAGE-dispW; const maxX=0; offX=Math.min(maxX,Math.max(minX,offX)); } else offX=(STAGE-dispW)/2;
+  if(dispH>STAGE){ const minY=STAGE-dispH; const maxY=0; offY=Math.min(maxY,Math.max(minY,offY)); } else offY=(STAGE-dispH)/2;
+}
+function applyTransform(){ const s=baseScale*userScale; cropImg.style.width=`${imgNatW*s}px`; cropImg.style.height=`${imgNatH*s}px`; cropImg.style.transform=`translate(${offX}px, ${offY}px)`; }
+
+cropCancel?.addEventListener("click", ()=> showCropper(false));
+cropUse?.addEventListener("click", () => {
+  const dataUrl = renderCropped(); pickedAvatarDataUrl = dataUrl;
+  joinAvatarPrev.innerHTML=""; const img=document.createElement("img"); img.src=dataUrl; joinAvatarPrev.appendChild(img);
+  showCropper(false);
+});
+
+function renderCropped(){
+  const canvas=document.createElement("canvas"); canvas.width=OUT; canvas.height=OUT;
+  const ctx=canvas.getContext("2d"); const s=baseScale*userScale;
+  const sx=Math.max(0,(0-offX)/s), sy=Math.max(0,(0-offY)/s);
+  const sw=Math.min(imgNatW-sx, STAGE/s), sh=Math.min(imgNatH-sy, STAGE/s);
+  ctx.imageSmoothingQuality="high";
+  ctx.drawImage(cropImg, sx,sy,sw,sh, 0,0, OUT,OUT);
+  return canvas.toDataURL("image/png");
+}
+
+/* ---------------- Pantalla Join / Persistencia ------------- */
 joinBtn?.addEventListener("click", () => {
-  const name = (joinName?.value || "").trim();
-  if (!name) return;
+  const name = (joinName?.value || "").trim(); if(!name) return;
   localStorage.setItem("gx_user", name);
-  setUserName(name);
+  setUserName(name); setAvatar(pickedAvatarDataUrl || "");
   showApp();
 });
-joinName?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") joinBtn?.click();
-});
+joinName?.addEventListener("keydown", e => { if(e.key==="Enter") joinBtn?.click(); });
 
-function showJoin() {
-  if (app) app.hidden = true;
-  if (joinScreen) joinScreen.style.display = "grid";
-}
-function showApp() {
-  if (joinScreen) joinScreen.style.display = "none";
-  if (app) app.hidden = false;
-  connectWS(); // inicia conexión
-}
+const savedUser = localStorage.getItem("gx_user") || "";
+if (savedUser){ setUserName(savedUser); showApp(); } else showJoin();
 
-// ---- WebSocket ----
-function connectWS() {
+function showJoin(){ app.hidden = true; joinScreen.classList.remove("hidden"); joinScreen.style.display = "grid"; }
+function showApp(){ joinScreen.classList.add("hidden"); joinScreen.style.display = "none"; app.hidden = false; setAvatar(getAvatar()); connectWS(); }
+
+/* ======================= WebSocket ======================== */
+function connectWS(){
   const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
-    appendSystem("Conectado al servidor.");
-    toggleButtons(true);
-    setPresence("online");
+    appendSystem("Conectado al servidor."); toggleButtons(true); setPresence("online");
     sendSetName(getUserName() || "Invitado");
+    const av=getAvatar(); if(av) ws.send(JSON.stringify({type:"set_avatar", dataUrl: av}));
     sendJoin(currentChannel);
   };
-
-  ws.onerror = () => {
-    appendSystem("No se pudo conectar al servidor WebSocket.");
-    toggleButtons(false);
-    setPresence("reconnecting");
-  };
-
-  ws.onclose = () => {
-    appendSystem("Conexión cerrada.");
-    toggleButtons(false);
-    setPresence("offline");
-  };
+  ws.onerror = () => { appendSystem("No se pudo conectar al servidor WebSocket."); toggleButtons(false); setPresence("reconnecting"); };
+  ws.onclose  = () => { appendSystem("Conexión cerrada."); toggleButtons(false); setPresence("offline"); };
 
   ws.onmessage = (event) => {
-    let msg;
-    try { msg = JSON.parse(event.data); }
-    catch { return; }
-
-    // Actualización de lista de usuarios
-    if (msg.type === "users") {
-      if (msg.channel === currentChannel) renderUsers(msg.users);
-      return;
-    }
-
-    // Mensajes de chat o sistema
+    let msg; try{ msg = JSON.parse(event.data); } catch{ return; }
+    if(msg.type==="users"){ if(msg.channel===currentChannel) renderUsers(msg.users); return; }
     const ch = msg.channel || currentChannel;
-    if (!messagesByChannel[ch]) messagesByChannel[ch] = [];
-    messagesByChannel[ch].push(msg);
-    if (ch === currentChannel) renderMessage(msg);
+    (messagesByChannel[ch] ||= []).push(msg);
+    if (ch===currentChannel) renderMessage(msg);
   };
 }
+function sendSetName(name){ if(ws?.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:"set_name", user:name})); }
+function sendJoin(channel){ if(ws?.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:"join", channel, user:getUserName()||"Invitado"})); }
 
-function sendSetName(name) {
-  if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "set_name", user: name }));
-  }
-}
-function sendJoin(channel) {
-  if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "join", channel, user: getUserName() || "Invitado" }));
-  }
-}
-
-// ---- Envío de mensajes ----
+/* =================== Envío de mensajes ==================== */
 sendBtn?.addEventListener("click", sendCurrentMessage);
-messageInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendCurrentMessage();
-});
-
+messageInput?.addEventListener("keydown", e => { if(e.key==="Enter") sendCurrentMessage(); });
 function sendCurrentMessage(){
-  const txt = (messageInput?.value || "").trim();
-  if (!txt) return;
-  if (!ws || ws.readyState !== WebSocket.OPEN) return appendSystem("No conectado.");
-
-  ws.send(JSON.stringify({
-    type: "chat",
-    user: getUserName() || "Invitado",
-    text: txt,
-    channel: currentChannel
-  }));
-  if (messageInput){ messageInput.value = ""; messageInput.focus(); }
+  const txt=(messageInput?.value||"").trim(); if(!txt) return;
+  if(!ws || ws.readyState!==WebSocket.OPEN) return appendSystem("No conectado.");
+  ws.send(JSON.stringify({type:"chat", user:getUserName()||"Invitado", text:txt, channel:currentChannel}));
+  messageInput.value=""; messageInput.focus();
 }
 
-// ---- Cerrar sesión ----
+/* ================= Cerrar sesión / Reconectar ============= */
 clearBtn?.addEventListener("click", () => {
-  if (ws?.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: "disconnect", user: getUserName(), channel: currentChannel }));
-  }
-  Object.keys(messagesByChannel).forEach(k => messagesByChannel[k] = []);
-  if (membersList) membersList.innerHTML = "";
-  if (msgBox) msgBox.innerHTML = "";
-  localStorage.removeItem("gx_user");
-  appendSystem("Cerraste sesión.");
-  try { ws?.close(); } catch {}
+  if(ws?.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:"disconnect", user:getUserName(), channel:currentChannel}));
+  Object.keys(messagesByChannel).forEach(k => messagesByChannel[k]=[]);
+  membersList.innerHTML=""; msgBox.innerHTML="";
+  localStorage.removeItem("gx_user"); setAvatar(""); setUserName("Invitado");
+  appendSystem("Cerraste sesión."); try{ ws?.close(); }catch{}
   showJoin();
 });
-
-// ---- Reconectar ----
 reconnectBtn?.addEventListener("click", () => {
-  if (ws && ws.readyState === WebSocket.OPEN) return appendSystem("Ya estás conectado.");
-  setPresence("reconnecting");
-  appendSystem("Intentando reconectar...");
-  connectWS();
+  if(ws && ws.readyState===WebSocket.OPEN) return appendSystem("Ya estás conectado.");
+  setPresence("reconnecting"); appendSystem("Intentando reconectar..."); connectWS();
 });
 
-// ---- Cambio de canal ----
+/* ===================== Cambio de canal ==================== */
 channelList?.addEventListener("click", (e) => {
-  const li = e.target.closest("li[data-channel]");
-  if (!li) return;
-  const newChannel = li.getAttribute("data-channel");
-  if (newChannel === currentChannel) return;
-
-  [...channelList.querySelectorAll("li")].forEach(x => x.classList.remove("active"));
-  li.classList.add("active");
-
-  currentChannel = newChannel;
-  if (roomTitle) roomTitle.textContent = `# ${currentChannel}`;
-  if (msgBox) {
-    msgBox.innerHTML = "";
-    (messagesByChannel[currentChannel] || []).forEach(renderMessage);
-  }
+  const li = e.target.closest("li[data-channel]"); if(!li) return;
+  const newCh = li.getAttribute("data-channel"); if(newCh===currentChannel) return;
+  [...channelList.querySelectorAll("li")].forEach(x=>x.classList.remove("active"));
+  li.classList.add("active"); currentChannel=newCh; roomTitle.textContent=`# ${currentChannel}`;
+  msgBox.innerHTML=""; (messagesByChannel[currentChannel]||[]).forEach(renderMessage);
   sendJoin(currentChannel);
 });
 
-// ---- Render ----
-function renderMessage(msg) {
-  if (!msgBox) return;
-  const div = document.createElement("div");
-  const isSystem = (msg.user === "Sistema");
-  const isSelf   = (!isSystem && (msg.user === (getUserName() || "Invitado")));
-
-  div.className = "msg " + (isSystem ? "system" : (isSelf ? "self" : "other")) + " flash";
-
-  const safeUser = escapeHtml(msg.user || "Invitado");
-  const safeText = escapeHtml(msg.text || "");
-  const safeTime = msg.time ? escapeHtml(msg.time) : new Date().toLocaleTimeString();
-
-  div.innerHTML = `
-    <div>
-      <strong>${safeUser}</strong>
-      <span class="meta">[${safeTime}]</span>
-    </div>
-    <div>${safeText}</div>
-  `;
-
-  msgBox.appendChild(div);
-  msgBox.scrollTop = msgBox.scrollHeight;
-  setTimeout(() => div.classList.remove("flash"), 600);
+/* ======================== Render UI ======================= */
+function renderMessage(msg){
+  const div=document.createElement("div");
+  const isSystem=(msg.user==="Sistema");
+  const isSelf=!isSystem && (msg.user===(getUserName()||"Invitado"));
+  div.className="msg "+(isSystem?"system":(isSelf?"self":"other"));
+  const user = escapeHtml(msg.user||"Invitado");
+  const text = escapeHtml(msg.text||"");
+  const time = msg.time ? escapeHtml(msg.time) : new Date().toLocaleTimeString();
+  div.innerHTML = `<div><strong>${user}</strong><span class="meta">[${time}]</span></div><div>${text}</div>`;
+  msgBox.appendChild(div); msgBox.scrollTop=msgBox.scrollHeight;
 }
-
 function renderUsers(users) {
-  if (!membersList) return;
   membersList.innerHTML = "";
   (users || []).forEach(u => {
-    const isMe = (u === (getUserName() || ""));
-    const display = isMe ? `${u} (tú)` : u;
+    const nameStr = typeof u === "string" ? u : (u.name || "Invitado");
+    const avatar  = typeof u === "string" ? "" : (u.avatar || "");
+    const isMe    = (nameStr === (getUserName() || ""));
+    const display = isMe ? `${nameStr} (tú)` : nameStr;
 
-    const li  = document.createElement("li");
+    const li = document.createElement("li");
+
+    // --- avatar + dot online
+    const aw = document.createElement("div");
+    aw.className = "avatar-wrap";
+    if (avatar) {
+      const img = document.createElement("img");
+      img.src = avatar;
+      aw.appendChild(img);
+    } else {
+      // fallback emoji
+      aw.textContent = "🟠";
+    }
     const dot = document.createElement("span");
-    dot.className = "status status-online";
+    dot.className = "m-dot";          // puntito verde titilante
+    aw.appendChild(dot);
 
+    // --- nombre truncable
     const name = document.createElement("span");
-    name.className = "user-name";  // 👈 le aplican los estilos de truncado
+    name.className = "user-name";
     name.textContent = display;
-    name.title = display;          // 👈 tooltip con el nombre completo
+    name.title = display;
 
-    li.appendChild(dot);
+    li.appendChild(aw);
     li.appendChild(name);
     membersList.appendChild(li);
   });
 }
 
-
-function appendSystem(text) {
-  renderMessage({ user: "Sistema", text, time: new Date().toLocaleTimeString(), channel: currentChannel });
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-function toggleButtons(connected) {
-  if (sendBtn) sendBtn.disabled = !connected;
-  if (clearBtn) clearBtn.disabled = !connected;
-  if (reconnectBtn) reconnectBtn.disabled = connected;
-}
-// ======================================================================
+/* ====================== Utilidades varias ================= */
+function appendSystem(text){ renderMessage({user:"Sistema", text, time:new Date().toLocaleTimeString(), channel:currentChannel}); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toggleButtons(connected){ sendBtn.disabled=!connected; clearBtn.disabled=!connected; reconnectBtn.disabled=connected; }

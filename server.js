@@ -1,3 +1,4 @@
+// Osprey GX Chat – WebSocket server (Express + ws)
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
@@ -7,8 +8,10 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// Archivos estáticos
 app.use(express.static("public"));
 
+/* -------------------- Helpers -------------------- */
 function broadcastToChannel(channel, obj) {
   const payload = JSON.stringify(obj);
   for (const client of wss.clients) {
@@ -20,21 +23,29 @@ function broadcastToChannel(channel, obj) {
 function usersInChannel(channel) {
   return [...wss.clients]
     .filter(c => c.readyState === WebSocket.OPEN && c.channel === channel)
-    .map(c => c.username || "Invitado");
+    .map(c => ({ name: c.username || "Invitado", avatar: c.avatar || "" }));
 }
 function pushUsers(channel) {
-  const users = usersInChannel(channel);
-  broadcastToChannel(channel, { type: "users", channel, users });
+  broadcastToChannel(channel, { type: "users", channel, users: usersInChannel(channel) });
+}
+// Tamaño real (bytes) de un dataURL base64
+function dataUrlSizeBytes(dataUrl) {
+  const m = /^data:\w+\/[\w.+-]+;base64,/.exec(dataUrl);
+  if (!m) return -1;
+  const b64 = dataUrl.slice(m[0].length);
+  const padding = b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0;
+  return (b64.length * 3) / 4 - padding;
 }
 
+/* -------------------- WebSocket -------------------- */
 wss.on("connection", (ws, req) => {
   ws.id = crypto.randomUUID();
   ws.username = "Invitado";
   ws.channel = "general";
+  ws.avatar = "";
 
   console.log(`✅ Nueva conexión desde ${req.socket.remoteAddress} (canal: ${ws.channel})`);
 
-  // Anunciar conexión genérica al canal por defecto
   broadcastToChannel(ws.channel, {
     user: "Sistema",
     time: new Date().toLocaleTimeString(),
@@ -46,26 +57,47 @@ wss.on("connection", (ws, req) => {
   ws.on("message", (data) => {
     let msg;
     try { msg = JSON.parse(data.toString()); }
-    catch { return ws.send(JSON.stringify({ user: "Sistema", time: new Date().toLocaleTimeString(), text: "Mensaje inválido.", channel: ws.channel })); }
+    catch {
+      return ws.send(JSON.stringify({
+        user: "Sistema",
+        time: new Date().toLocaleTimeString(),
+        text: "Mensaje inválido.",
+        channel: ws.channel
+      }));
+    }
 
-    // set_name
     if (msg.type === "set_name") {
       ws.username = (msg.user || "Invitado").toString().trim() || "Invitado";
       pushUsers(ws.channel);
       return;
     }
 
-    // join canal
+    if (msg.type === "set_avatar") {
+      const dataUrl = (msg.dataUrl || "").toString();
+      const BYTES_MAX = 5 * 1024 * 1024; // 5 MB
+      const okMime = dataUrl.startsWith("data:image/") && dataUrl.includes(";base64,");
+      const size = okMime ? dataUrlSizeBytes(dataUrl) : -1;
+      if (okMime && size >= 0 && size <= BYTES_MAX) {
+        ws.avatar = dataUrl;
+        pushUsers(ws.channel);
+      } else {
+        ws.send(JSON.stringify({
+          user: "Sistema",
+          time: new Date().toLocaleTimeString(),
+          text: "Avatar rechazado: formato inválido o tamaño > 5 MB.",
+          channel: ws.channel
+        }));
+      }
+      return;
+    }
+
     if (msg.type === "join") {
       const newCh = (msg.channel || "general").toString().trim();
       const oldCh = ws.channel;
       if (newCh === oldCh) { pushUsers(oldCh); return; }
-
       ws.channel = newCh;
-      // actualizar listas en ambos canales
       pushUsers(oldCh);
       pushUsers(newCh);
-
       broadcastToChannel(newCh, {
         user: "Sistema",
         time: new Date().toLocaleTimeString(),
@@ -75,7 +107,6 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    // disconnect voluntario
     if (msg.type === "disconnect") {
       broadcastToChannel(ws.channel, {
         user: msg.user || ws.username,
@@ -87,15 +118,13 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    // mensaje normal
     const ch = msg.channel || ws.channel;
-    const full = {
+    broadcastToChannel(ch, {
       user: msg.user || ws.username || "Invitado",
       time: new Date().toLocaleTimeString(),
       text: msg.text || "",
       channel: ch
-    };
-    broadcastToChannel(ch, full);
+    });
   });
 
   ws.on("close", () => {
@@ -111,5 +140,8 @@ wss.on("connection", (ws, req) => {
   ws.on("error", (err) => console.error("WS error:", err));
 });
 
+/* -------------------- HTTP -------------------- */
 const PORT = 3000;
-server.listen(PORT, "0.0.0.0", () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Servidor en http://localhost:${PORT}`);
+});

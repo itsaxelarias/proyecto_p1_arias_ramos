@@ -282,3 +282,85 @@ html,body{
   font-weight: 500;
   cursor: default;
 }
+
+
+/* ===== Avatar picker (pantalla de ingreso) ===== */
+.avatar-picker{display:flex; align-items:center; gap:12px; margin-bottom:8px}
+.avatar-preview{
+  width:64px; height:64px; border-radius:14px; display:grid; place-items:center;
+  background:#101010; border:1px solid var(--border); cursor:pointer; user-select:none;
+  overflow:hidden; position:relative;
+}
+.avatar-preview span{opacity:.7}
+.avatar-preview img{width:100%; height:100%; object-fit:cover; display:block}
+.avatar-help{font-size:12px; color:var(--muted)}
+
+/* ===== Avatares en UI ===== */
+.me-avatar{position:relative; overflow:hidden}
+.me-avatar img{width:100%; height:100%; object-fit:cover; display:block}
+
+.members-list .avatar{
+  width:22px; height:22px; border-radius:8px; overflow:hidden; flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2)); display:grid; place-items:center; color:#000; font-weight:700;
+  border:1px solid #2a2a2a;
+}
+.members-list .avatar img{width:100%; height:100%; object-fit:cover; display:block}
+.members-list .status{display:none} /* usamos avatar + punto opcional si quieres, por ahora oculto */
+/* Avatar con punto de estado superpuesto (lista de miembros) */
+.members-list .avatar-wrap{
+  position: relative;
+  width: 28px; height: 28px;
+  border-radius: 8px; overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid #202020;
+  background: #141414;
+  display: grid; place-items: center;
+}
+.members-list .avatar-wrap img{
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+/* Puntito verde titilante, pegado al avatar */
+.members-list .m-dot{
+  position: absolute; right: -2px; bottom: -2px;
+  width: 10px; height: 10px; border-radius: 999px;
+  background: #22c55e;
+  border: 2px solid #141414;            /* borde para separar del fondo */
+  box-shadow: 0 0 0 0 rgba(34,197,94,.55);
+  animation: pulse 1.6s ease-out infinite;  /* usa el @keyframes pulse que ya tienes */
+}
+
+
+
+/* ===== Recortador de avatar (modal) ===== */
+.cropper{
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background: rgba(0,0,0,.6); z-index: 60;
+}
+.cropper.hidden{ display: none; }
+
+.cropper-card{
+  width: min(520px, 96vw); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 16px; padding: 16px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
+}
+
+.crop-stage{
+  width: 320px; height: 320px; margin: 0 auto; position: relative;
+  background: #0f0f0f; border-radius: 12px; border: 1px solid #202020;
+  overflow: hidden; touch-action: none; /* para arrastrar en móvil */
+}
+#cropImg{
+  position: absolute; left: 0; top: 0; transform-origin: 0 0;
+  user-select: none; -webkit-user-drag: none; image-rendering: auto;
+}
+
+.crop-mask{
+  position: absolute; inset: 0;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.45); pointer-events: none;
+  border-radius: 12px;
+}
+
+.crop-controls{ display: flex; flex-direction: column; gap: 10px }
+.crop-controls input[type="range"]{ width: 100% }
+
+.crop-actions{ display: flex; gap: 10px; justify-content: flex-end }
