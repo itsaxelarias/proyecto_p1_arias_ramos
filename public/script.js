@@ -283,8 +283,9 @@ function showJoin(){ app.hidden = true; joinScreen.classList.remove("hidden"); j
 function showApp(){ joinScreen.classList.add("hidden"); joinScreen.style.display = "none"; app.hidden = false; setAvatar(getAvatar()); connectWS(); }
 
 /* ======================= WebSocket ======================== */
-function connectWS(){
-  const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
+function connectWS() {
+  const host = window.WS_HOST || location.host; // local fallback
+  const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + host;
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
