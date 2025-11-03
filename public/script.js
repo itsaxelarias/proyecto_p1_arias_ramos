@@ -275,3 +275,34 @@ function renderUsers(users) {
 function appendSystem(text){ renderMessage({user:"Sistema", text, time:new Date().toLocaleTimeString(), channel:currentChannel}); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toggleButtons(connected){ sendBtn.disabled=!connected; clearBtn.disabled=!connected; reconnectBtn.disabled=connected; }
+
+
+// ===== Toggle de MIEMBROS (desktop + móvil) =====
+const chatLayout    = document.querySelector(".chat");
+const membersPanel  = document.querySelector(".members");
+const membersToggle = document.getElementById("membersToggle"); // tu botón con el ícono 👥
+
+const mqMobile = window.matchMedia("(max-width: 720px)");
+
+function toggleMembers() {
+  if (mqMobile.matches) {
+    // Móvil: drawer
+    membersPanel?.classList.toggle("open");
+  } else {
+    // Desktop: colapsar/expandir columna
+    chatLayout?.classList.toggle("collapsed");
+  }
+}
+
+membersToggle?.addEventListener("click", toggleMembers);
+
+// Si cambia el tamaño de la ventana, resetea estados que no aplican
+mqMobile.addEventListener?.("change", (e) => {
+  if (e.matches) {
+    // Entró a móvil: por si quedó colapsado en desktop
+    chatLayout?.classList.remove("collapsed");
+  } else {
+    // Entró a desktop: por si quedó abierto el drawer móvil
+    membersPanel?.classList.remove("open");
+  }
+});

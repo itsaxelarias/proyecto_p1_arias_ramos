@@ -1,5 +1,5 @@
 /* =========================
-   Osprey GX Chat – Dark + Orange (FULL clean)
+   Osprey GX Chat – Dark + Orange (CLEAN)
    ========================= */
 
 :root{
@@ -7,11 +7,15 @@
   --accent:#ff7b00; --accent-2:#ffae42;
   --text:#f2f2f2; --muted:#a0a0a0; --border:#2a2a2a; --warn:#ff4d4d;
   --radius:16px; --shadow:0 8px 25px rgba(0,0,0,.4);
+
+  /* layout */
+  --mbr-w: 280px;         /* ancho del panel miembros en desktop */
+  --mbr-drawer: 86vw;     /* ancho del drawer en móvil */
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
-  width:100%; height:100%;
+  width:100%;height:100%;
   background:var(--bg);
   font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;
   color:var(--text);
@@ -21,7 +25,9 @@ html,body{
 /* ---------- Pantalla de ingreso ---------- */
 .join-wrap{
   position:fixed; inset:0; display:none; place-items:center;
-  background: radial-gradient(1200px 800px at 10% 0%, #181818 0%, transparent 50%), rgba(0,0,0,.75);
+  background:
+    radial-gradient(1200px 800px at 10% 0%, #181818 0%, transparent 50%),
+    rgba(0,0,0,.75);
   z-index:50;
 }
 .join-card{
@@ -42,7 +48,18 @@ html,body{
   padding:12px 14px; border-radius:12px; outline:none
 }
 
-/* ---------- Layout principal ---------- */
+/* avatar picker (join) */
+.avatar-picker{display:flex; align-items:center; gap:12px; margin-bottom:8px}
+.avatar-preview{
+  width:64px; height:64px; border-radius:14px; display:grid; place-items:center;
+  background:#101010; border:1px solid var(--border); cursor:pointer;
+  overflow:hidden; position:relative;
+}
+.avatar-preview span{opacity:.7}
+.avatar-preview img{width:100%; height:100%; object-fit:cover; display:block}
+.avatar-help{font-size:12px; color:var(--muted)}
+
+/* ---------- App layout ---------- */
 .app{
   display:grid;
   grid-template-columns: 260px minmax(0,1fr);
@@ -66,7 +83,6 @@ html,body{
 .brand-text h1{font-size:17px;color:var(--accent)}
 .brand-text span{font-size:12px;color:var(--muted)}
 
-/* Canales */
 .channels h2{
   font-size:12px;color:var(--muted);
   text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px
@@ -79,12 +95,12 @@ html,body{
 .channels li:hover{background:#1f1f1f;color:var(--accent-2)}
 .channels li.active{background:#222;color:var(--accent);font-weight:700}
 
-/* ---------- Panel del usuario (nombre arriba, estado abajo) ---------- */
+/* ---------- Panel “Yo” ---------- */
 .me{
   margin-top:auto; padding:12px; border-radius:14px;
   background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.15));
   border:1px solid var(--border);
-  display:flex; align-items:center; justify-content:flex-start; gap:12px;
+  display:flex; align-items:center; gap:12px;
   box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,0.03);
   min-width:0;
 }
@@ -94,64 +110,32 @@ html,body{
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color:#000; font-weight:700; font-size:18px;
   box-shadow: 0 6px 18px rgba(255,123,0,.15);
+  overflow:hidden;
 }
+.me-avatar img{width:100%; height:100%; object-fit:cover}
 
-/* Contenedor de texto (columna) */
-.me-info{
-  display:flex; flex-direction:column; gap:6px; min-width:0;
-}
-
-/* Nombre arriba (puede ser DIV o INPUT deshabilitado) */
+.me-info{display:flex; flex-direction:column; gap:6px; min-width:0}
 .me-name{
-  background:none; border:none; outline:none;
   color:var(--text); font-weight:700; font-size:15px;
-  padding:0; width:auto; max-width:160px; min-width:0;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  max-width:160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
-.me-name:disabled{opacity:1} /* por si usas <input disabled> */
-
-/* Fila de estado abajo: punto + texto */
-.me-status-row{
-  display:flex; align-items:center; gap:6px;
-  font-size:13px; color:var(--muted);
-}
-
-/* Puntito de estado (con variantes) */
-.status{
-  width:9px; height:9px; border-radius:50%;
-  background:#22c55e; /* online por defecto */
-  box-shadow:0 0 0 0 rgba(34,197,94,.6);
-  animation:pulse 1.6s ease-out infinite;
-}
-.status-online{ background:#22c55e }
-.status-reconnecting{
-  background:#f59e0b;
-  box-shadow:0 0 0 0 rgba(245,158,11,.55);
-  animation:pulseAmber 1.6s ease-out infinite;
-}
+.me-status-row{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted)}
+.status{width:9px; height:9px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 0 rgba(34,197,94,.6); animation:pulse 1.6s ease-out infinite}
+.status-reconnecting{ background:#f59e0b; box-shadow:0 0 0 0 rgba(245,158,11,.55); animation:pulseAmber 1.6s ease-out infinite }
 .status-offline{ background:#ef4444; box-shadow:none; animation:none }
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@keyframes pulseAmber{0%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}70%{box-shadow:0 0 0 8px rgba(245,158,11,0)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
 
-@keyframes pulse{
-  0%{ box-shadow:0 0 0 0 rgba(34,197,94,.6) }
-  70%{ box-shadow:0 0 0 8px rgba(34,197,94,0) }
-  100%{ box-shadow:0 0 0 0 rgba(34,197,94,0) }
-}
-@keyframes pulseAmber{
-  0%{ box-shadow:0 0 0 0 rgba(245,158,11,.55) }
-  70%{ box-shadow:0 0 0 8px rgba(245,158,11,0) }
-  100%{ box-shadow:0 0 0 0 rgba(245,158,11,0) }
-}
-
-/* ---------- Chat (contenido) ---------- */
+/* ---------- Chat (grid) ---------- */
 .chat{
   display:grid;
-  grid-template-columns: minmax(0,1fr) 240px;  /* mensajes | miembros */
-  grid-template-rows: 64px minmax(0,1fr) 70px; /* header | mensajes | composer */
-  width:100%; height:100%;
-  min-width:0; min-height:0;
+  grid-template-columns: 1fr var(--mbr-w);
+  grid-template-rows: 64px 1fr 70px;
+  height:100vh;
+  transition: grid-template-columns .34s ease;
 }
 
-/* Header */
+/* header */
 .chat-header{
   grid-column:1/3; display:flex;align-items:center;justify-content:space-between;
   background:#111;border-bottom:1px solid var(--border);padding:0 16px
@@ -160,27 +144,48 @@ html,body{
 .room .sub{font-size:12px;color:var(--muted)}
 .actions{display:flex;gap:8px}
 
-/* Miembros (derecha) */
+/* miembros (columna derecha) */
 .members{
   grid-column:2/3; grid-row:2/4;
-  border-left:1px solid var(--border);
-  background:#0f0f0f;
-  display:flex; flex-direction:column; gap:10px; padding:12px;
-  min-width:0; min-height:0;
+  display:flex; flex-direction:column; gap:10px;
+  background:#0f0f0f; border-left:1px solid var(--border);
+  padding:12px; width:var(--mbr-w);
+  overflow:hidden;
+  transition: width .34s ease, padding .34s ease, opacity .25s ease, border-color .25s ease;
+  will-change: width, padding, opacity;
 }
 .members-title{font-size:12px;color:var(--muted);text-transform:uppercase}
-.members-list{list-style:none;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto}
-.members-list li{
+.members-list{
+  list-style:none; display:flex; flex-direction:column; gap:8px;
+  min-height:0; overflow-y:auto; overflow-x:hidden;
+}
+.members-list::-webkit-scrollbar{width:8px}
+.members-list::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:8px}
+
+/* ítem de miembros */
+.member-item{
   display:flex; align-items:center; gap:10px;
-  background:#141414; padding:8px 10px; border-radius:10px;
-  border:1px solid #202020; color:var(--text);
+  background:#141414; border:1px solid #202020; border-radius:12px;
+  padding:8px 10px; min-width:0;
+}
+.avatar-wrap{
+  position:relative; width:28px; height:28px; flex:0 0 28px;
+  border-radius:8px; overflow:hidden; background:#222; border:1px solid #202020;
+}
+.avatar-wrap img{width:100%; height:100%; object-fit:cover; display:block}
+.m-dot{
+  position:absolute; right:-2px; bottom:-2px;
+  width:10px; height:10px; border-radius:50%;
+  background:#22c55e; border:2px solid #141414;
+  box-shadow:0 0 0 0 rgba(34,197,94,.55);
+  animation:pulse 1.6s ease-out infinite;
+}
+.member-name{
+  flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 
-/* Mensajes (izquierda) */
-.messages-wrap{
-  grid-column:1/2; grid-row:2/3;
-  padding:12px; background:#101010; min-width:0; min-height:0
-}
+/* mensajes */
+.messages-wrap{grid-column:1/2; grid-row:2/3; padding:12px; background:#101010; min-width:0; min-height:0}
 .messages{
   height:100%; width:100%; overflow:auto;
   padding:10px; border-radius:12px; background:#131313; border:1px solid #1e1e1e
@@ -193,12 +198,9 @@ html,body{
 .msg.self{border-left-color:var(--accent-2);background:#1b1b1b}
 .msg.other{border-left-color:var(--accent)}
 .msg .meta{color:var(--muted);font-size:12px;margin-left:6px}
-.msg.flash{animation:flashBg .9s ease-out 1}
 @keyframes msgIn{to{opacity:1;transform:translateY(0)}}
-@keyframes flashBg{0%{box-shadow:inset 0 0 0 9999px rgba(255,123,0,0.08)}100%{box-shadow:inset 0 0 0 0 rgba(255,123,0,0)}}
-.msg strong{color:var(--accent-2)}
 
-/* Composer */
+/* composer */
 .composer{
   grid-column:1/2; grid-row:3/4; display:flex; gap:10px; align-items:center;
   padding:10px 14px; border-top:1px solid var(--border); background:#111
@@ -209,7 +211,6 @@ html,body{
 }
 .input::placeholder{color:#6b6b6b}
 
-/* Botones */
 .btn{
   padding:10px 14px; border:none; border-radius:10px; cursor:pointer;
   transition:background .2s, transform .1s; color:#fff; background:#222; border:1px solid #2b2b2b;
@@ -221,146 +222,212 @@ html,body{
 .btn.warn:hover{ background:#3b2222 }
 .btn.ghost{ background:transparent }
 
-/* Scrollbar sutil */
-.messages::-webkit-scrollbar{width:10px}
-.messages::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:10px}
+/* ---------- Colapso desktop (suave) ---------- */
+.chat.collapsed{ grid-template-columns: 1fr }   /* el grid se expande */
+.chat.collapsed .members{
+  width:0; padding:0; opacity:0; border-color:transparent;
+  pointer-events:none;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width:1024px){
   .app{grid-template-columns:240px minmax(0,1fr)}
-  .chat{grid-template-columns:minmax(0,1fr) 200px}
-}
-@media (max-width:720px){
-  .app{grid-template-columns:1fr}
-  .sidebar{
-    flex-direction:row; align-items:center; gap:10px; padding:10px;
-    border-bottom:1px solid var(--border); min-width:0
-  }
-  .channels{display:none}
-  .chat{grid-template-columns:1fr; grid-template-rows:64px minmax(0,1fr) 68px}
-  .members{display:none}
+  :root{ --mbr-w: 240px }
 }
 
-/* ===== Miembros: truncado elegante y sin scroll horizontal ===== */
-/* ===== Ajuste visual del punto titilante en lista de miembros ===== */
+@media (max-width:720px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+
+  .chat{
+    grid-template-columns:1fr;
+    grid-template-rows:56px 1fr 68px;
+  }
+  .chat-header{position:sticky; top:0; z-index:5}
+
+  /* drawer móvil */
+  .members{
+    position:fixed; right:0; top:56px; bottom:68px;
+    width:min(var(--mbr-drawer), 340px); max-width:92vw;
+    transform:translateX(110%); opacity:0;
+    transition: transform .3s cubic-bezier(.2,.7,.2,1), opacity .24s ease;
+    box-shadow:-18px 0 30px rgba(0,0,0,.45);
+    z-index:20;
+  }
+  .members.open{ transform:translateX(0); opacity:1 }
+  .members.collapsed{ width:min(var(--mbr-drawer), 340px); padding:12px } /* seguridad */
+
+  /* backdrop opcional */
+  .members-backdrop{
+    position:fixed; inset:56px 0 68px 0;
+    background:rgba(0,0,0,.35);
+    opacity:0; pointer-events:none; z-index:19;
+    transition:opacity .24s ease;
+  }
+  .members-backdrop.show{ opacity:1; pointer-events:auto }
+}
+
+/* -------- Scrollbars sutiles -------- */
+.messages::-webkit-scrollbar{width:10px}
+.messages::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:10px}
+
+/* -------- Cropper modal (si lo usas) -------- */
+.cropper{position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.6); z-index:60}
+.cropper.hidden{display:none}
+.cropper-card{
+  width:min(520px,96vw); background:var(--panel-2);
+  border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow);
+  display:flex; flex-direction:column; gap:12px;
+}
+.crop-stage{
+  width:320px; height:320px; margin:0 auto; position:relative;
+  background:#0f0f0f; border-radius:12px; border:1px solid #202020; overflow:hidden; touch-action:none;
+}
+#cropImg{position:absolute; left:0; top:0; transform-origin:0 0; user-select:none; -webkit-user-drag:none}
+.crop-mask{position:absolute; inset:0; box-shadow:0 0 0 9999px rgba(0,0,0,.45); pointer-events:none; border-radius:12px}
+.crop-controls{display:flex; flex-direction:column; gap:10px}
+.crop-actions{display:flex; gap:10px; justify-content:flex-end}
+
+
+/* === Lista de miembros con el mismo look & feel que el panel "Yo" === */
+.members-list{
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 6px;
+  min-width: 0;
+}
+
+.member-card{
+  padding: 12px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.15));
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.member-left{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Avatar igual tamaño que "me-avatar" */
+.member-avatar{
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: 0 0 40px;
+  background: linear-gradient(135deg,var(--accent),var(--accent-2));
+  display: grid; place-items: center;
+  position: relative;
+}
+.member-avatar img{
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+/* Columna de texto */
+.member-info{ display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.member-name{
+  color: var(--text); font-weight: 700; font-size: 15px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0; max-width: 100%;
+}
+
+/* Fila de estado: punto + texto (idéntico a .me-status-row) */
+.member-status{
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted);
+}
+.member-status .status-dot{
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34,197,94,.6);
+  animation: pulse 1.6s ease-out infinite;   /* ya existe en tu CSS */
+}
+
+
+/* ===== Miembros: mismos estilos que el panel "Yo" ===== */
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.members-title {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 6px;
+}
+
+.members-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Tarjeta del miembro (igual look & feel que .me) */
 .members-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  background: #141414;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid #202020;
-  color: var(--text);
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.15));
+  box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,0.03);
+  min-width: 0;              /* <- imprescindible para el ellipsis */
 }
 
-.members-list .status {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: #22c55e;
-  box-shadow: 0 0 0 0 rgba(34,197,94,.5);
-  animation: pulseMember 1.6s ease-out infinite;
-}
-
-/* Sutil animación de pulso (más suave que el del panel inferior) */
-@keyframes pulseMember {
-  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
-  70%  { box-shadow: 0 0 0 8px rgba(34,197,94,0); }
-  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-}
-
-/* Nombre truncado con tooltip */
-.members-list .user-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-  cursor: default;
-}
-
-
-/* ===== Avatar picker (pantalla de ingreso) ===== */
-.avatar-picker{display:flex; align-items:center; gap:12px; margin-bottom:8px}
-.avatar-preview{
-  width:64px; height:64px; border-radius:14px; display:grid; place-items:center;
-  background:#101010; border:1px solid var(--border); cursor:pointer; user-select:none;
-  overflow:hidden; position:relative;
-}
-.avatar-preview span{opacity:.7}
-.avatar-preview img{width:100%; height:100%; object-fit:cover; display:block}
-.avatar-help{font-size:12px; color:var(--muted)}
-
-/* ===== Avatares en UI ===== */
-.me-avatar{position:relative; overflow:hidden}
-.me-avatar img{width:100%; height:100%; object-fit:cover; display:block}
-
-.members-list .avatar{
-  width:22px; height:22px; border-radius:8px; overflow:hidden; flex-shrink:0;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2)); display:grid; place-items:center; color:#000; font-weight:700;
-  border:1px solid #2a2a2a;
-}
-.members-list .avatar img{width:100%; height:100%; object-fit:cover; display:block}
-.members-list .status{display:none} /* usamos avatar + punto opcional si quieres, por ahora oculto */
-/* Avatar con punto de estado superpuesto (lista de miembros) */
-.members-list .avatar-wrap{
+/* Avatar cuadrado redondeado, con fallback de color+emoji si no hay imagen */
+.avatar-wrap {
   position: relative;
   width: 28px; height: 28px;
-  border-radius: 8px; overflow: hidden;
+  border-radius: 10px;
+  overflow: hidden;
   flex: 0 0 auto;
-  border: 1px solid #202020;
-  background: #141414;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: 1px solid #2a2a2a;
   display: grid; place-items: center;
+  color: #000; font-weight: 700;
 }
-.members-list .avatar-wrap img{
+.avatar-wrap img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
-/* Puntito verde titilante, pegado al avatar */
-.members-list .m-dot{
+
+/* Punto verde titilante pegado al avatar (igual animación que abajo) */
+.m-dot {
   position: absolute; right: -2px; bottom: -2px;
-  width: 10px; height: 10px; border-radius: 999px;
+  width: 10px; height: 10px; border-radius: 50%;
   background: #22c55e;
-  border: 2px solid #141414;            /* borde para separar del fondo */
+  border: 2px solid #141414;                  /* separa del fondo */
   box-shadow: 0 0 0 0 rgba(34,197,94,.55);
-  animation: pulse 1.6s ease-out infinite;  /* usa el @keyframes pulse que ya tienes */
+  animation: pulse 1.6s ease-out infinite;     /* usa tu @keyframes pulse */
+}
+
+/* Nombre: una sola línea con elipsis + tooltip (title ya lo pones en JS) */
+.user-name {
+  flex: 1 1 auto;
+  min-width: 0;                   /* <- sin esto no hay elipsis */
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 
-
-/* ===== Recortador de avatar (modal) ===== */
-.cropper{
-  position: fixed; inset: 0; display: grid; place-items: center;
-  background: rgba(0,0,0,.6); z-index: 60;
+.members-list li:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.18));
+  border-color: #333;
 }
-.cropper.hidden{ display: none; }
-
-.cropper-card{
-  width: min(520px, 96vw); background: var(--panel-2);
-  border: 1px solid var(--border); border-radius: 16px; padding: 16px;
-  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
-}
-
-.crop-stage{
-  width: 320px; height: 320px; margin: 0 auto; position: relative;
-  background: #0f0f0f; border-radius: 12px; border: 1px solid #202020;
-  overflow: hidden; touch-action: none; /* para arrastrar en móvil */
-}
-#cropImg{
-  position: absolute; left: 0; top: 0; transform-origin: 0 0;
-  user-select: none; -webkit-user-drag: none; image-rendering: auto;
-}
-
-.crop-mask{
-  position: absolute; inset: 0;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,.45); pointer-events: none;
-  border-radius: 12px;
-}
-
-.crop-controls{ display: flex; flex-direction: column; gap: 10px }
-.crop-controls input[type="range"]{ width: 100% }
-
-.crop-actions{ display: flex; gap: 10px; justify-content: flex-end }
