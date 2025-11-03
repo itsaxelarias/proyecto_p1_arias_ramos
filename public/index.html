@@ -112,6 +112,19 @@
       </section>
 
       <!-- Mensajes -->
+
+
+<!-- Overlay de previsualización de imagen -->
+<div id="lightbox" class="gx-lightbox hidden" aria-hidden="true">
+  <div class="gx-lightbox__backdrop" id="lightboxBackdrop"></div>
+  <figure class="gx-lightbox__card">
+    <button id="lightboxClose" class="gx-lightbox__close" aria-label="Cerrar">✕</button>
+    <img id="lightboxImg" alt="Vista previa" />
+    <figcaption id="lightboxCap"></figcaption>
+  </figure>
+</div>
+
+
       <section class="messages-wrap">
         <div id="messages" class="messages" aria-live="polite"></div>
       </section>
@@ -119,6 +132,8 @@
       <!-- Composer -->
       <footer class="composer">
         <input id="message" class="input" placeholder="Escribe un mensaje..." />
+        <input id="attachFile" type="file" accept="image/*" hidden />
+        <button id="attachBtn" class="btn" title="Adjuntar imagen">📎</button>
         <button id="sendBtn" class="btn primary">Enviar</button>
       </footer>
     </main>

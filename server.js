@@ -46,6 +46,7 @@ wss.on("connection", (ws, req) => {
 
   console.log(`✅ Nueva conexión desde ${req.socket.remoteAddress} (canal: ${ws.channel})`);
 
+  // Bienvenida/sistema y usuarios
   broadcastToChannel(ws.channel, {
     user: "Sistema",
     time: new Date().toLocaleTimeString(),
@@ -66,12 +67,14 @@ wss.on("connection", (ws, req) => {
       }));
     }
 
+    // ---- Ajuste de nombre ----
     if (msg.type === "set_name") {
       ws.username = (msg.user || "Invitado").toString().trim() || "Invitado";
       pushUsers(ws.channel);
       return;
     }
 
+    // ---- Ajuste de avatar ----
     if (msg.type === "set_avatar") {
       const dataUrl = (msg.dataUrl || "").toString();
       const BYTES_MAX = 5 * 1024 * 1024; // 5 MB
@@ -91,6 +94,7 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
+    // ---- Cambiar de canal ----
     if (msg.type === "join") {
       const newCh = (msg.channel || "general").toString().trim();
       const oldCh = ws.channel;
@@ -107,6 +111,7 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
+    // ---- Desconectar (desde cliente) ----
     if (msg.type === "disconnect") {
       broadcastToChannel(ws.channel, {
         user: msg.user || ws.username,
@@ -118,6 +123,35 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
+    // ---- Mensaje de IMAGEN ----
+    if (msg.type === "image") {
+      const dataUrl = (msg.dataUrl || "").toString();
+      const BYTES_MAX = 4 * 1024 * 1024; // 4 MB para imágenes en chat
+      const okMime = dataUrl.startsWith("data:image/") && dataUrl.includes(";base64,");
+      const size = okMime ? dataUrlSizeBytes(dataUrl) : -1;
+
+      if (!okMime || size < 0 || size > BYTES_MAX) {
+        return ws.send(JSON.stringify({
+          user: "Sistema",
+          time: new Date().toLocaleTimeString(),
+          text: "Imagen rechazada: formato inválido o > 4 MB.",
+          channel: ws.channel
+        }));
+      }
+
+      const ch = msg.channel || ws.channel;
+      broadcastToChannel(ch, {
+        type: "image",
+        user: msg.user || ws.username || "Invitado",
+        time: new Date().toLocaleTimeString(),
+        channel: ch,
+        dataUrl,
+        text: (msg.text || "").toString().slice(0, 280)
+      });
+      return;
+    }
+
+    // ---- Mensaje de TEXTO (por defecto) ----
     const ch = msg.channel || ws.channel;
     broadcastToChannel(ch, {
       user: msg.user || ws.username || "Invitado",

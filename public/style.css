@@ -541,3 +541,90 @@ html,body{
   /* 5) Mostrar ☰ en header para abrir canales también en landscape */
   #channelsToggle { display: inline-flex; }
 }
+
+/* ===== Mensajes: imagen ===== */
+.msg.image{
+  padding: 8px;
+  background: #111;
+  border: 1px solid #222;
+  border-left: 4px solid var(--accent);
+}
+
+.msg.image figure{
+  margin: 0; display: flex; flex-direction: column; gap: 6px;
+}
+
+.msg.image img{
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #202020;
+  background: #0e0e0e;
+  cursor: zoom-in;
+}
+
+.msg.image figcaption{
+  font-size: 12px; color: var(--muted);
+  padding: 0 2px;
+}
+
+/* mini-grid si más adelante envías varias */
+.msg.image-grid{
+  display: grid; gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+
+/* ===== Lightbox para imágenes del chat ===== */
+.gx-lightbox.hidden { display: none; }
+
+.gx-lightbox{
+  position: fixed; inset: 0; z-index: 80;
+  display: grid; place-items: center;
+}
+
+.gx-lightbox__backdrop{
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.65);
+  opacity: 0; transition: opacity .18s ease;
+}
+
+.gx-lightbox__card{
+  position: relative;
+  max-width: min(96vw, 1100px);
+  max-height: min(92vh, 900px);
+  margin: 0 12px;
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 25px 50px rgba(0,0,0,.55);
+  display: flex; flex-direction: column; gap: 8px;
+  transform: scale(.98); opacity: 0;
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+.gx-lightbox.show .gx-lightbox__backdrop{ opacity: 1; }
+.gx-lightbox.show .gx-lightbox__card{ transform: scale(1); opacity: 1; }
+
+.gx-lightbox__close{
+  position: absolute; right: 10px; top: 10px;
+  background: #1e1e1e; color: #eee; border: 1px solid #2a2a2a;
+  border-radius: 10px; padding: 6px 10px; cursor: pointer;
+}
+.gx-lightbox__close:hover{ background: #252525; }
+
+#lightboxImg{
+  display: block; width: 100%; height: auto;
+  max-height: calc(92vh - 90px);
+  border-radius: 10px; object-fit: contain;
+}
+
+#lightboxCap{
+  color: var(--muted); font-size: 13px;
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* cursor en miniaturas del chat */
+.msg.image img{ cursor: zoom-in; }

@@ -17,6 +17,19 @@ const msgBox         = document.getElementById("messages");
 const messageInput   = document.getElementById("message");
 const sendBtn        = document.getElementById("sendBtn");
 const clearBtn       = document.getElementById("clearBtn");
+
+
+// ===== Lightbox (visor de imagen del chat) =====
+const lightbox        = document.getElementById("lightbox");
+const lightboxImg     = document.getElementById("lightboxImg");
+const lightboxCap     = document.getElementById("lightboxCap");
+const lightboxClose   = document.getElementById("lightboxClose");
+const lightboxBackdrop= document.getElementById("lightboxBackdrop");
+
+
+// Adjuntar imagen al chat
+const attachBtn  = document.getElementById("attachBtn");
+const attachFile = document.getElementById("attachFile");
 const reconnectBtn   = document.getElementById("reconnectBtn");
 const channelList    = document.getElementById("channelList");
 
@@ -80,6 +93,37 @@ let isDragging = false, lastX = 0, lastY = 0;
 let pickedAvatarDataUrl = "";
 
 
+
+
+function openLightbox(src, caption){
+  if (!src) return;
+  lightboxImg.src = src;
+  lightboxCap.textContent = caption || "";
+  lightbox.classList.remove("hidden");
+  // micro-tick para permitir la animación
+  requestAnimationFrame(() => lightbox.classList.add("show"));
+  document.body.style.overflow = "hidden"; // bloquea scroll de fondo
+  lightbox.setAttribute("aria-hidden", "false");
+}
+
+function closeLightbox(){
+  lightbox.classList.remove("show");
+  setTimeout(() => {
+    lightbox.classList.add("hidden");
+    lightboxImg.src = "";
+  }, 180);
+  document.body.style.overflow = ""; // restaura scroll
+  lightbox.setAttribute("aria-hidden", "true");
+}
+
+lightboxClose?.addEventListener("click", closeLightbox);
+lightboxBackdrop?.addEventListener("click", closeLightbox);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !lightbox.classList.contains("hidden")) closeLightbox();
+});
+
+
+
 // Tras elegir archivo -> cropper
 joinAvatar?.addEventListener("change", () => {
   const f = joinAvatar.files?.[0];
@@ -102,6 +146,43 @@ function openCropper(dataUrl){
   };
   cropImg.src = dataUrl;
 }
+
+// Leer archivo a DataURL
+function fileToDataURL(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+// Redimensionar/comprimir para no mandar archivos enormes
+async function resizeImageFile(file, maxW = 1280, quality = 0.85){
+  // Si no es imagen, devolvemos null
+  if (!file.type.startsWith("image/")) return null;
+  const url = await fileToDataURL(file);
+
+  const img = new Image();
+  img.src = url;
+  await new Promise(res => { img.onload = res; });
+
+  // Si ya es pequeña, regresamos tal cual
+  if (img.width <= maxW) return url;
+
+  const scale = maxW / img.width;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  // Usa el mime original si es jpeg/png; por simplicidad, jpeg
+  const out = canvas.toDataURL("image/jpeg", quality);
+  return out;
+}
+
+
 function showCropper(flag){ cropper.classList.toggle("hidden", !flag); cropper.setAttribute("aria-hidden", String(!flag)); }
 
 cropZoom?.addEventListener("input", () => {
@@ -149,6 +230,44 @@ function renderCropped(){
 }
 
 /* ---------------- Pantalla Join / Persistencia ------------- */
+
+// === Adjuntar imagen al chat ===
+// Reutilizamos tus helpers fileToDataURL y resizeImageFile del cropper 👌
+attachBtn?.addEventListener("click", () => attachFile?.click());
+
+attachFile?.addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) { appendSystem("Solo se permiten imágenes."); attachFile.value=""; return; }
+  if (!ws || ws.readyState !== WebSocket.OPEN) { appendSystem("No conectado."); attachFile.value=""; return; }
+
+  try {
+    // Comprimir/ajustar ancho máx 1280px (usa tus funciones ya definidas)
+    const dataUrl = (await resizeImageFile(file, 1280, 0.85)) || (await fileToDataURL(file));
+    if (!dataUrl.startsWith("data:image/") || !dataUrl.includes(";base64,")) {
+      appendSystem("Imagen no válida."); attachFile.value = ""; return;
+    }
+
+    const caption = (messageInput?.value || "").trim(); // opcional: usar lo escrito como pie
+    ws.send(JSON.stringify({
+      type: "image",
+      channel: currentChannel,
+      user: getUserName() || "Invitado",
+      dataUrl,
+      text: caption
+    }));
+    // Si quieres limpiar el input de texto tras mandar la imagen como pie:
+    // messageInput.value = "";
+  } catch (err) {
+    console.error(err);
+    appendSystem("No se pudo adjuntar la imagen.");
+  } finally {
+    attachFile.value = "";
+  }
+});
+
+
+
 joinBtn?.addEventListener("click", () => {
   const name = (joinName?.value || "").trim(); if(!name) return;
   localStorage.setItem("gx_user", name);
@@ -224,16 +343,61 @@ channelList?.addEventListener("click", (e) => {
 
 /* ======================== Render UI ======================= */
 function renderMessage(msg){
-  const div=document.createElement("div");
-  const isSystem=(msg.user==="Sistema");
-  const isSelf=!isSystem && (msg.user===(getUserName()||"Invitado"));
-  div.className="msg "+(isSystem?"system":(isSelf?"self":"other"));
-  const user = escapeHtml(msg.user||"Invitado");
-  const text = escapeHtml(msg.text||"");
-  const time = msg.time ? escapeHtml(msg.time) : new Date().toLocaleTimeString();
-  div.innerHTML = `<div><strong>${user}</strong><span class="meta">[${time}]</span></div><div>${text}</div>`;
-  msgBox.appendChild(div); msgBox.scrollTop=msgBox.scrollHeight;
+  const isSystem = (msg.user === "Sistema");
+  const isSelf   = !isSystem && (msg.user === (getUserName() || "Invitado"));
+  const timeStr  = msg.time ? escapeHtml(msg.time) : new Date().toLocaleTimeString();
+
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + (isSystem ? "system" : (isSelf ? "self" : "other"));
+
+  // Cabecera (usuario + hora)
+  const metaRow = document.createElement("div");
+  const who = document.createElement("strong");
+  who.textContent = msg.user || "Invitado";
+  const when = document.createElement("span");
+  when.className = "meta";
+  when.textContent = ` [${timeStr}]`;
+  metaRow.appendChild(who);
+  metaRow.appendChild(when);
+  wrap.appendChild(metaRow);
+
+    // === Caso IMAGEN ===
+  if (msg.type === "image" && msg.dataUrl?.startsWith("data:image/")) {
+    wrap.classList.add("image");
+
+    const figure = document.createElement("figure");
+    const img = document.createElement("img");
+    img.src = msg.dataUrl;
+    img.alt = msg.text || "Imagen";
+    img.loading = "lazy";
+    img.style.maxWidth = "100%";
+    img.style.borderRadius = "10px";
+
+    // 👉 Abre visor al hacer click
+    img.addEventListener("click", () => openLightbox(img.src, msg.text));
+
+    figure.appendChild(img);
+    if (msg.text) {
+      const cap = document.createElement("figcaption");
+      cap.textContent = msg.text;
+      figure.appendChild(cap);
+    }
+    wrap.appendChild(figure);
+    msgBox.appendChild(wrap);
+    msgBox.scrollTop = msgBox.scrollHeight;
+    return;
+  }
+
+
+  // === Caso TEXTO ===
+  const body = document.createElement("div");
+  body.textContent = msg.text || "";
+  wrap.appendChild(body);
+
+  msgBox.appendChild(wrap);
+  msgBox.scrollTop = msgBox.scrollHeight;
 }
+
 function renderUsers(users) {
   membersList.innerHTML = "";
   (users || []).forEach(u => {
