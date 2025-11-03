@@ -1,18 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat en Tiempo Real</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Osprey GX</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="chat-container">
-    <h2>💬 Chat en Tiempo Real</h2>
-    <div id="messages"></div>
-    <input id="username" placeholder="Tu nombre" />
-    <input id="message" placeholder="Escribe un mensaje..." />
-    <button id="sendBtn">Enviar</button>
-    <button id="clearBtn">Cerrar sesión</button>
+  <div class="app">
+
+    <!-- Sidebar izquierda -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">💬</div>
+        <div class="brand-text">
+          <h1>Osprey GX Chat</h1>
+          <span>Distribuidas • WS</span>
+        </div>
+      </div>
+
+     <nav class="channels">
+  <h2>Canales</h2>
+  <ul id="channelList">
+    <li class="active" data-channel="general"># general</li>
+    <li data-channel="off-topic"># off-topic</li>
+    <li data-channel="soporte"># soporte</li>
+  </ul>
+</nav>
+
+
+      <div class="me">
+        <div class="me-avatar">🟣</div>
+        <div class="me-info">
+          <input id="username" class="me-name" placeholder="Tu nombre" />
+          <span class="me-status">En línea</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Contenido principal -->
+    <main class="chat">
+      <header class="chat-header">
+        <div class="room">
+          <h2># general</h2>
+          <span class="sub">Mensajería en tiempo real</span>
+        </div>
+        <div class="actions">
+          <button id="reconnectBtn" class="btn ghost" title="Reconectar">↻</button>
+          <button id="clearBtn" class="btn warn" title="Cerrar sesión">Cerrar</button>
+        </div>
+      </header>
+
+      <!-- Lista de usuarios (derecha en desktop, oculta/colapsable en móvil) -->
+      <section class="members" aria-label="Miembros">
+        <div class="members-title">Miembros</div>
+        <ul class="members-list" id="members">
+          <li>👤 Sistema</li>
+          <li>👤 Invitado</li>
+        </ul>
+      </section>
+
+      <!-- Zona de mensajes -->
+      <section class="messages-wrap">
+        <div id="messages" class="messages" aria-live="polite" aria-atomic="false"></div>
+      </section>
+
+      <!-- Barra de entrada -->
+      <footer class="composer">
+        <input id="message" class="input" placeholder="Escribe un mensaje..." />
+        <button id="sendBtn" class="btn primary">Enviar</button>
+      </footer>
+    </main>
+
   </div>
 
   <script src="script.js"></script>
