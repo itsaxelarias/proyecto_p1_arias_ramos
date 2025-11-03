@@ -54,6 +54,6 @@ const interval = setInterval(() => {
 server.on("close", () => clearInterval(interval));
 
 const PORT = 3000;
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Servidor en http://localhost:${PORT}`);
 });

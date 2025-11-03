@@ -1,4 +1,8 @@
-const ws = new WebSocket("ws://localhost:3000"); // si accedes desde otra PC, usa ws://IP:3000
+// Detecta automáticamente el host e inicia la conexión WebSocket
+const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
+console.log("Conectando a:", WS_URL);
+const ws = new WebSocket(WS_URL);
+
 const msgBox = document.getElementById("messages");
 const username = document.getElementById("username");
 const message  = document.getElementById("message");
@@ -56,7 +60,7 @@ clearBtn.onclick = () => {
   msgBox.innerHTML = "";
 };
 
-// Utilidades
+// ---- FUNCIONES AUXILIARES ----
 function appendSystem(text) {
   const div = document.createElement("div");
   div.classList.add("msg");
@@ -66,5 +70,11 @@ function appendSystem(text) {
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return s.replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
 }
