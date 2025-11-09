@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Osprey GX Chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ========== PANTALLA DE INGRESO (overlay) ========== -->
+  <div id="join-screen" class="join-wrap" role="dialog" aria-modal="true">
+    <div class="join-card">
+      <div class="join-head">
+        <div class="join-logo">🦅</div>
+        <div>
+          <h1>Osprey GX Chat</h1>
+          <p>Elige tu nombre y avatar</p>
+        </div>
+      </div>
+
+      <!-- Selector + preview -->
+      <label class="avatar-picker">
+        <input id="joinAvatar" type="file" accept="image/*" hidden />
+        <div class="avatar-preview" id="joinAvatarPreview" title="Seleccionar avatar">
+          <span>📷</span>
+        </div>
+        <div class="avatar-help">Sube imagen (PNG/JPG, máx. 5&nbsp;MB)</div>
+      </label>
+
+      <!-- Modal recorte -->
+      <div id="cropper" class="cropper hidden" aria-hidden="true">
+        <div class="cropper-card">
+          <div class="crop-stage" id="cropStage">
+            <img id="cropImg" alt="Recortar" />
+            <div class="crop-mask"></div>
+          </div>
+
+          <div class="crop-controls">
+            <input id="cropZoom" type="range" min="0.5" max="3" step="0.01" value="1" />
+            <div class="crop-actions">
+              <button id="cropCancel" class="btn">Cancelar</button>
+              <button id="cropUse" class="btn primary">Usar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <input id="joinName" class="join-input" placeholder="Tu nombre" />
+      <button id="joinBtn" class="btn primary">Unirse</button>
+    </div>
+  </div>
+
+  <!-- ========== APLICACIÓN ========== -->
+  <div class="app" id="app" hidden>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">🦅</div>
+        <div class="brand-text">
+          <h1>Osprey GX Chat</h1>
+          <span>Distribuidas • WS</span>
+        </div>
+      </div>
+
+      <nav class="channels">
+        <h2>Canales</h2>
+        <ul id="channelList">
+          <li class="active" data-channel="general"># general</li>
+          <li data-channel="off-topic"># off-topic</li>
+          <li data-channel="soporte"># soporte</li>
+        </ul>
+      </nav>
+
+      <!-- Panel Yo -->
+      <div class="me">
+        <div class="me-left">
+          <div class="me-avatar" id="meAvatar">🟠</div>
+          <div class="me-info">
+            <div class="me-name" id="usernameDisplay">Invitado</div>
+            <div class="me-status-row">
+              <span class="status status-online" id="meDot"></span>
+              <span id="mePresence">En línea</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Chat (grilla: header | mensajes | miembros | composer) -->
+    <main class="chat">
+      <!-- Header -->
+      <header class="chat-header">
+        <div class="room">
+          <h2 id="roomTitle"># general</h2>
+          <span class="sub">Osprey GX Chat</span>
+        </div>
+        <div class="actions">
+          <!-- ☰ solo se muestra en móvil por CSS -->
+          <button id="channelsToggle" class="btn ghost" aria-label="Abrir canales">☰</button>
+          <!-- 👥 toggle miembros (drawer en móvil, colapso en desktop) -->
+          <button id="membersToggle" class="btn ghost" title="Miembros" aria-pressed="false">👥</button>
+          <button id="reconnectBtn" class="btn ghost" title="Reconectar">↻</button>
+          <button id="clearBtn" class="btn warn" title="Cerrar sesión">Cerrar</button>
+        </div>
+      </header>
+
+      <!-- Lista Miembros (columna derecha en desktop / drawer en móvil) -->
+      <section class="members" aria-label="Miembros">
+        <div class="members-title">Miembros</div>
+        <ul class="members-list" id="members"></ul>
+      </section>
+
+      <!-- Mensajes -->
+
+
+<!-- Overlay de previsualización de imagen -->
+<div id="lightbox" class="gx-lightbox hidden" aria-hidden="true">
+  <div class="gx-lightbox__backdrop" id="lightboxBackdrop"></div>
+  <figure class="gx-lightbox__card">
+    <button id="lightboxClose" class="gx-lightbox__close" aria-label="Cerrar">✕</button>
+    <img id="lightboxImg" alt="Vista previa" />
+    <figcaption id="lightboxCap"></figcaption>
+  </figure>
+</div>
+
+
+      <section class="messages-wrap">
+        <div id="messages" class="messages" aria-live="polite"></div>
+      </section>
+
+      <!-- Composer -->
+      <footer class="composer">
+        <input id="message" class="input" placeholder="Escribe un mensaje..." />
+        <input id="attachFile" type="file" accept="image/*" hidden />
+        <button id="attachBtn" class="btn" title="Adjuntar imagen">📎</button>
+        <button id="sendBtn" class="btn primary">Enviar</button>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Telones (NO dentro de .chat para no romper la grilla) -->
+  <div id="membersBackdrop" class="members-backdrop"></div>
+  <div id="sidebarBackdrop"  class="sidebar-backdrop"></div>
+
+
+  <script>
+  // window.WS_HOST = "https://proyecto-p1-arias-ramos.onrender.com";  // reemplaza con tu dominio de Render
+  </script>
+
+  <!-- Cargar versión modular para navegadores modernos y fallback no-module -->
+  <script type="module" src="./src/app.js"></script>
+  <!-- <script nomodule src="./script.js"></script> -->
+  <!-- <script nomodule src="../server/server.js"></script> -->
+
+</body>
+</html>

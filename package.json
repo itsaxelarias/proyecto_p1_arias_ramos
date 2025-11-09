@@ -1,0 +1,22 @@
+{
+  "name": "osprey-gx-chat",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Chat en tiempo real con WebSockets",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
+  },
+  "keywords": ["websocket", "chat", "nodejs"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "express": "^4.18.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
